@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [{
+    "name": "调试 SVG CLI",
+    "type": "node",
+    "request": "launch",
+    "program": "${workspaceFolder}/dist/main.js",
+    "cwd": "${workspaceFolder}",
+    "preLaunchTask": "build",
+    "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+    "console": "integratedTerminal",
+    "skipFiles": ["<node_internals>/**"]
+  }]
+}

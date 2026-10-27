@@ -8,7 +8,7 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "start": "node dist/main.js",
-    "test": "node --import tsx --test tests/EnvironmentCheck.test.ts"
+    "test": "node --import tsx --test tests/EnvironmentCheck.test.ts tests/domain/Shapes.test.ts tests/domain/Tree.test.ts"
   },
   "keywords": [],
   "author": "",

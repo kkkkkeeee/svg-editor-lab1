@@ -85,10 +85,9 @@ test("help: 无文档可用，全部 19 个命令均标注实现状态", () => {
   const result = new CommandDispatcher(new EditorSession()).dispatch({ name: "help", args: [] });
   assert.match(result, /\[已实现\] help/);
   assert.match(result, /\[已实现\] init \[w\] \[h\]/);
-  const pending = ["read", "save",
-    "group", "ungroup", "addto", "front", "back"];
+  const pending = ["read", "save"];
   for (const name of pending) assert.ok(result.includes("[暂未实现] " + name));
-  for (const name of ["create", "tree", "show", "undo", "redo", "move", "scale", "set", "delete", "canvas"]) assert.ok(result.includes("[已实现] " + name));
+  for (const name of ["create", "tree", "show", "undo", "redo", "move", "scale", "set", "delete", "canvas", "addto", "front", "back", "group", "ungroup"]) assert.ok(result.includes("[已实现] " + name));
 });
 
 test("REPL: 管道一次输入多行、错误后继续、末行无换行的 EOF", () => {

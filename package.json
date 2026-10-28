@@ -8,7 +8,7 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "start": "node dist/main.js",
-    "test": "node --import tsx --test tests/EnvironmentCheck.test.ts tests/domain/Shapes.test.ts tests/domain/Tree.test.ts tests/cli/Cli.test.ts tests/application/CreateHistory.test.ts tests/application/BasicEdit.test.ts tests/application/DeleteCanvas.test.ts"
+    "test": "node --import tsx --test tests/EnvironmentCheck.test.ts tests/domain/Shapes.test.ts tests/domain/Tree.test.ts tests/cli/Cli.test.ts tests/application/CreateHistory.test.ts tests/application/BasicEdit.test.ts tests/application/DeleteCanvas.test.ts tests/application/HierarchyOrder.test.ts tests/application/GroupUngroup.test.ts"
   },
   "keywords": [],
   "author": "",

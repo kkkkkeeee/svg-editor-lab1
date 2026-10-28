@@ -1,4 +1,5 @@
 import { Shape, type ShapeDescription } from "./Shape.js";
+import { Group } from "./shapes/Group.js";
 
 export interface DocumentDescription {
   readonly width: number;
@@ -64,6 +65,59 @@ export class SvgDocument {
     const children = this.targetChildren(withoutSource, parentId);
     const inserted = this.insert(children, moving.clone(), index);
     this.commit(this.replaceChildren(withoutSource, parentId, inserted));
+  }
+
+  /** 成员按原树遍历顺序；同父放在最早成员处，跨父追加到根。 */
+  public group(newId: string, memberIds: readonly string[]): void {
+    const group = new Group(newId);
+    if (this.findIn(this.#roots, newId)) throw new Error(`id already exists: ${newId}`);
+    if (memberIds.length === 0) throw new Error("group requires at least one member");
+    const selected = new Set<string>();
+    for (const id of memberIds) {
+      if (selected.has(id)) throw new Error(`duplicate group member: ${id}`);
+      this.requireShape(id);
+      selected.add(id);
+    }
+    const members: Shape[] = [];
+    this.collectGroupMembers(this.#roots, selected, members);
+    const firstParent = this.getParentId(members[0].id);
+    const sameParent = members.every(member => this.getParentId(member.id) === firstParent);
+    const parentId = sameParent ? firstParent : null;
+    const index = sameParent
+      ? this.targetChildren(this.#roots, parentId).findIndex(node => selected.has(node.id))
+      : undefined;
+    let candidate = this.#roots;
+    for (const member of members) candidate = this.removeFrom(candidate, member.id);
+    const children = this.targetChildren(candidate, parentId);
+    this.commit(this.replaceChildren(candidate, parentId,
+      this.insert(children, group.withChildren(members), index)));
+  }
+
+  /** 直接孩子替代容器所在位置；不把继承样式写为显式属性。 */
+  public ungroup(id: string): void {
+    const group = this.requireShape(id);
+    if (!group.isContainer) throw new Error(`not a container: ${id}`);
+    const parentId = this.getParentId(id);
+    if (parentId === null) throw new Error(`cannot ungroup top-level container: ${id}`);
+    const siblings = this.targetChildren(this.#roots, parentId);
+    const index = siblings.findIndex(node => node.id === id);
+    const children = [...siblings.slice(0, index), ...group.children, ...siblings.slice(index + 1)];
+    this.commit(this.replaceChildren(this.#roots, parentId, children));
+  }
+
+  private collectGroupMembers(nodes: readonly Shape[], selected: ReadonlySet<string>, members: Shape[]): void {
+    for (const node of nodes) {
+      if (selected.has(node.id)) {
+        for (const id of selected) {
+          if (id !== node.id && this.findIn(node.children, id)) {
+            throw new Error(`cannot group a container into its own descendant: ${node.id}`);
+          }
+        }
+        members.push(node);
+      } else {
+        this.collectGroupMembers(node.children, selected, members);
+      }
+    }
   }
 
   public move(id: string, dx: number, dy: number): void {

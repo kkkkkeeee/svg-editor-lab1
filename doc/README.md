@@ -4,7 +4,7 @@
 
 使用 TypeScript 面向对象设计实现命令行 SVG 编辑器，重点是 Command、Composite、模块依赖和真实的 AI 协作过程。
 
-**M1（82eca1b）、M2（6997b13）、M3（7607642）已提交，用户确认已推送 GitHub。M4-A/M4-B 已审核，M4 最终验收通过，用户已授权本地提交与推送；提交及远程结果以 Git 记录为准。** 当前 SVG REPL 支持 help、init、canvas、create、move、scale、set、delete、tree、show、undo、redo。结构调整、文件读写与插件尚未实现。当前完整测试结果为 124 项通过；历史阶段的测试结果保留不变，详见末尾记录。
+**M1～M4 已提交并推送，M4 提交为 22d4fa6。M5-A/M5-B 已通过设计审核及最终代码验收；本次交付包含全部 M5 功能。** 当前 SVG REPL 支持 help、init、canvas、create、move、scale、set、delete、group、ungroup、addto、front、back、tree、show、undo、redo。文件读写与插件尚未实现。当前完整测试结果为 151 项通过；历史阶段测试结果保留不变，详见末尾记录。
 
 需求依据：课程 `phase_cli_1.md`，本机原件位于 `D:/learning/读研/1.1/高级软件开发/phase_cli_1.md`。本说明不替代原始要求。
 
@@ -47,7 +47,7 @@ assignment1/
 │   ├── main.ts              # 组装会话、分发器、解析器、显示器与 REPL
 │   ├── cli/                 # CliApplication、CommandParser、ConsoleRenderer
 │   ├── application/         # EditorSession、CommandDispatcher、CommandHistory、DocumentFormatter、NumericArgument
-│   │   └── commands/        # EditCommand 接口、CreateCommand、MoveCommand、ScaleCommand、SetCommand、DeleteCommand
+│   │   └── commands/        # EditCommand 接口、CreateCommand、MoveCommand、ScaleCommand、SetCommand、DeleteCommand、AddToCommand、FrontCommand、BackCommand、GroupCommand、UngroupCommand
 │   ├── domain/
 │   │   ├── Shape.ts
 │   │   ├── ShapeFactory.ts
@@ -57,7 +57,7 @@ assignment1/
 ├── tests/
 │   ├── EnvironmentCheck.test.ts  # 已更新为 CLI 启动/EOF 测试
 │   ├── cli/Cli.test.ts
-│   ├── application/         # CreateHistory.test.ts、BasicEdit.test.ts、DeleteCanvas.test.ts
+│   ├── application/         # CreateHistory.test.ts、BasicEdit.test.ts、DeleteCanvas.test.ts、HierarchyOrder.test.ts、GroupUngroup.test.ts
 │   └── domain/             # Shapes.test.ts、Tree.test.ts
 ├── examples/preview.svg
 ├── doc/README.md
@@ -71,7 +71,7 @@ assignment1/
 
 .gitkeep 使 Git 保留空目录，不创建空业务类；添加实际文件后可移除。node_modules、dist、.npm-cache 和日志已忽略。项目内 npm 缓存沿用此前解决写权限问题的配置。
 
-保留原 tsconfig.json 的严格检查、NodeNext、sourceMap 和 dist/main.js 输出布局。tsconfig.test.json 继承它，将 rootDir 放宽到项目根并启用 noEmit，覆盖 src 和 tests。测试脚本显式指定入口、CLI、创建历史、基础编辑、删除画布、叶子及树模型七个测试文件，避免 Windows shell 通配符差异；新增测试文件时同步调整入口。
+保留原 tsconfig.json 的严格检查、NodeNext、sourceMap 和 dist/main.js 输出布局。tsconfig.test.json 继承它，将 rootDir 放宽到项目根并启用 noEmit，覆盖 src 和 tests。测试脚本显式指定入口、CLI、创建历史、基础编辑、删除画布、层级排序、分组解散、叶子及树模型九个测试文件，避免 Windows shell 通配符差异；新增测试文件时同步调整入口。
 
 ## 3. 模块划分与依赖规则
 
@@ -160,7 +160,7 @@ Shape 提供 move、scale、set 等共同接口；Rect、Circle 等是叶子，G
 
 | 问题 | 暂定方案或待明确内容 |
 | --- | --- |
-| 跨父容器 group | 同父级放在最早被选节点位置；跨父级新组放根级末尾，孩子按操作前文档遍历顺序排列。原文未规定完整规则，需在 M5 前确认 |
+| 跨父容器 group | 同父级放在最早被选节点位置；跨父级新组放根级末尾，孩子按操作前文档遍历顺序排列。M5-B 已采纳为项目设计约定（非课程逐字规定），详见第 20 节 |
 | 普通 g 的 set | 样式写到 g，让未显式设置属性的孩子继承，不覆盖孩子显式样式 |
 | front/back | front 是视觉最上层，即同级 SVG 列表末尾；back 是开头 |
 | save 路径 | init 后没有默认路径时要求文件名；显式 save 成功后建议更新默认路径，原文仅明确 read 路径 |
@@ -586,3 +586,166 @@ M4-A 与 M4-B 均保留在工作区，未暂存、提交、推送或创建标签
 最终 npm.cmd run typecheck、npm.cmd run build、npm.cmd test 均退出 0；124 项测试通过、0 失败、0 跳过。git diff --check 通过，仅有换行格式提示。未解决的既有规模限制仍为完整快照内存、历史无容量上限、深层递归及浮点精度；未发现阻止本阶段交付的功能问题。
 
 提交信息：feat: implement basic editing and canvas management。提交哈希及推送结果在生成后报告，不在提交内容中预写尚未发生的成功结果。本轮不创建 final 标签，不开始 M5。
+
+## 19. M5-A：归属与绘制顺序（2026-10-28）
+
+### 原文核对与实现
+
+课程第 3 节明确 addto <gid> <id>，目标容器在前、图形在后，追加为最后一个孩子；front <id> / back <id> 调整同级 z-order。原文的“最前/最后”没有直接说数组下标，本轮按用户明确要求和 SVG 绘制顺序：front 移到兄弟数组末尾（后绘制、视觉上层），back 移到开头（先绘制、视觉下层）。未发现与原文明示要求冲突的行为。
+
+新增独立 AddToCommand、FrontCommand、BackCommand，实现 EditCommand，仅保存不可变 id。AddToCommand 调用 reparent(id, groupId)，包含同父追加；FrontCommand 查询当前 parentId 后调用 reparent(id, parentId)，BackCommand 同样查询当前父级并传入 index=0。父级为 null 表示根层；排序永不跨父级。省略 index 时由领域接口按移除后的孩子数量追加，避免计算前后索引产生偏差。
+
+三个命令都由原 CommandDispatcher 分发并通过 EditorSession.execute 执行。原 reparent 已验证目标容器、自包含/后代循环、整树 id 唯一性，并按受控候选树提交。本轮没有修改领域接口、CommandHistory、EditorSession 或 CLI 解析器，没有增加类型 switch、事务框架或依赖。
+
+### 错误与历史约定
+
+源 id 缺失沿用原文 no such shape: id；目标容器缺失/非容器沿用已有 reparent 的 no such container / not a container。这两个提示在课程错误表明确用于 in，addto 未单独指定，因此复用同一容器语义。循环使用既有 cannot move a container into itself or its descendant: id；不误用课程专为 group 命令规定的错误文本。若源与目标同时无效，沿用领域校验顺序先报源缺失。CLI 统一添加 error:，失败后继续输入。
+
+成功一次操作对应一个历史单元；恢复的是完整文档快照，保留原父级、兄弟顺序、全部几何/样式和子树。成功的无效果编辑（已在端点、单一孩子或同父末尾 addto）仍产生一个撤销单元，清空 redo，也能解除 IO 后禁用，保持此前约定。失败不发布文档、不改变历史或 redo。命令每次执行查当前父级，不缓存旧对象引用。
+
+跨父级只改变结构，不重算几何或写入继承样式。移动后若新父级的继承样式不同，最终外观可能改变，这是 SVG 继承的自然结果；并不代表图形显式属性被改写。
+
+### 验证与真实过程
+
+新增 tests/application/HierarchyOrder.test.ts，12 项测试。覆盖跨父级及嵌套 Group 移动、同父追加、祖先目标合法移动、自包含/后代循环、目标缺失和非容器、根层/嵌套排序、完整属性子树保持、恢复父级顺序、失败保留 redo、混合编辑历史、命令复用、无效果成功历史及真实 CLI 多行会话。断言直接检查 document 描述、父级和 children 顺序；不是只匹配摘要。绘制顺序测试检查相互覆盖图形在树中的先后，本阶段尚无 SVG 输出/浏览器图像验证，不宣称进行了视觉渲染测试。
+
+保留原 124 项测试；唯一旧测试修改是 help 将三条命令改为已实现，仍检查其余四条命令尚未实现。首次类型检查、构建和测试均通过，未遇到需要修复的实现或测试错误。npm.cmd run typecheck、npm.cmd run build、npm.cmd test 退出码均为 0；共 136 项通过、0 失败、0 跳过。git diff --check 无空白错误，仅换行提示。
+
+实际运行编译后的 node dist/main.js，以多行管道输入，EOF 退出码 0。以下按输入和输出整理节选：
+
+```text
+svg> init
+canvas 800x600 created
+svg> create g g
+g#g created
+svg> create rect a 0 0 10 10 red
+rect#a created
+svg> create circle b 1 2 3 in g
+circle#b created in g#g
+svg> addto g a
+rect#a moved into g#g
+svg> front b
+circle#b brought to front
+svg> tree
+svg (800x600)
+└── g#g
+    ├── rect#a  x=0 y=0 width=10 height=10 fill=red
+    └── circle#b  cx=1 cy=2 r=3
+svg> back b
+circle#b sent to back
+svg> undo
+undone: circle#b sent to back
+svg> redo
+redone: circle#b sent to back
+svg> addto g g
+error: cannot move a container into itself or its descendant: g
+svg> tree
+svg (800x600)
+└── g#g
+    ├── circle#b  cx=1 cy=2 r=3
+    └── rect#a  x=0 y=0 width=10 height=10 fill=red
+```
+
+四层架构无需修订。现有完整快照开销、递归深度等规模限制仍存在。本轮只完成 M5-A，未实现 group/ungroup/read/save 或插件，未暂存、提交、推送或创建标签。
+
+## 20. M5-B：分组与解散（2026-10-28）
+
+### 20.1 原文依据和项目设计约定
+
+编码前重新完整阅读课程原件，并核对第 3、4.2、4.3、6 节以及 M1-M5A 审计。下面明确区分证据层级：
+
+- **A：原文明确。** group 创建新容器，从各原父级摘出成员，保持相对顺序；id 唯一且大小写敏感。ungroup 使直接子节点提升到父级并占据原组位置；根级容器禁止解散。一条编辑是一个撤销单元，失败不改变状态。
+- **A：原文明确错误。** 祖先与后代同时被选择时为 `cannot group a container into its own descendant: <祖先 gid>`；根级解散为 `cannot ungroup top-level container: <gid>`。领域只抛正文，CLI 添加 `error:`。
+- **B：示例支持。** 第 6 节 `group markers c1 box` 保留 c1/box 顺序，新的根级组占据这两个相邻成员的位置；`group bad c1 markers` 表明即使后代参数写在祖先前面，也应报告祖先 markers。
+- **C：项目设计约定。** 按操作前文档深度优先遍历顺序收集成员，忽略参数排列顺序。同父级时，新组放在最早被选成员的索引处；不相邻成员之间的未选节点仍在原父级，彼此顺序不变。跨父级时，新组追加到 svg 根末尾，原父级即使变空也保留。跨父级包括一个成员在根、另一个在嵌套容器的情况。
+- **C：项目设计约定。** 允许单成员分组，零成员拒绝；重复参数报 `duplicate group member: <id>`，不自动去重。新组无显式样式，不从成员复制样式。缺失成员/解散目标为 `no such shape: <id>`；叶子解散为 `not a container: <id>`，不能误用专属于后续 box 的 composite 错误。
+- **C：项目设计约定。** 空的嵌套 Group 解散只移除自身，不产生替代节点。多种错误并存时先检查新 id 合法性/冲突，再检查参数成员重复/存在，最后检查祖先后代；祖先冲突按原树遍历顺序报告第一个。
+
+不相邻分组可能改变成员与未选兄弟之间的绘制关系；跨父级分组可能改变继承样式。解散时也可能因移除组上的 fill/stroke 而改变外观。只保留每个孩子原有的显式属性与缺省状态，不悄悄物化继承值。本轮验证树/属性，尚未通过 SVG 渲染验证画面。
+
+### 20.2 实现与必要接口调整
+
+新增 GroupCommand、UngroupCommand，各自实现 EditCommand，一类一文件。前者复制并冻结成员 id 数组；两者只保存 id 参数，不缓存图形/文档引用。Dispatcher 每条命令只调用一次 EditorSession.execute，并把 help 的两条状态改为已实现。
+
+SvgDocument 新增 group(newId, memberIds)、ungroup(id)。现有 add/delete/reparent 每次都会提交一次树，逐个直接调用不能给领域调用者提供多节点原子性。因此新增最小受控领域操作：先验证和构造候选树，最后仅一次 commit 验证所有 id、克隆并发布。复用已有 removeFrom/replaceChildren/insert、Group.withChildren 和多态 clone；不暴露私有 children，不增加标签分派或通用事务框架。
+
+group 用确定的 Group 类创建普通容器，不是按类型名分派。ungroup 按 isContainer 能力检查；本阶段只存在普通 Group 容器，不提前实现插件复合体解散规则。Shape、Group、EditorSession、CommandHistory 均无需修改。历史仍使用完整文档前后快照，失败发生在历史写入之前。
+
+### 20.3 验证证据与真实过程
+
+新增 tests/application/GroupUngroup.test.ts，15 个测试（其中参数化覆盖根层/嵌套及相邻/不相邻）。覆盖全部本轮需求：成员参数顺序、跨父级、单成员、冲突/缺失/重复 id、祖先后代错误、原位提升、空组、类型/样式/文本/子树保持、单次撤销、连续混合历史、同名 id 恢复后编辑、失败保留 redo、IO 后重新解禁及真实 REPL。失败测试比较完整描述并实际 redo；另直接调用领域方法，避免会话候选机制掩盖领域原子性错误。
+
+原有测试全部保留；Cli.test.ts 仅把 group/ungroup 的 help 断言从待实现移至已实现。package.json 显式加入新文件，不增加依赖。第一次类型检查、构建及全量测试均通过，没有发现需另行修复的运行缺陷。实现中处理的实际接口不足是多节点操作需单次领域提交；没有将它描述成旧版本已实现功能的 bug。
+
+| 验证 | 实际结果 |
+| --- | --- |
+| npm.cmd run typecheck | 通过，生产及测试 TypeScript 检查 |
+| npm.cmd run build | 通过 |
+| npm.cmd test | 151 项通过，0 失败、0 跳过（原 136 + 新 15） |
+| git diff --check | 通过，无空白错误；换行提示不代表测试失败 |
+| 独立编译后 CLI | 直接启动 node dist/main.js；14 条命令、两次树断言、group/ungroup 的 undo/redo、错误后 show 均通过，EOF 退出码 0、stderr 为空 |
+
+独立回放输入如下；该回放不导入业务对象，也不以单元测试通过推断入口成功：
+
+```text
+init
+create g parent
+create rect a 1 2 3 4 in parent
+create circle b 5 6 7 in parent
+group pair b a
+tree
+undo
+redo
+ungroup pair
+tree
+undo
+redo
+ungroup parent
+show a
+```
+
+实际关键输出：
+
+```text
+g#pair created with 2 children
+svg (800x600)
+└── g#parent
+    └── g#pair
+        ├── rect#a  x=1 y=2 width=3 height=4
+        └── circle#b  cx=5 cy=6 r=7
+undone: g#pair created with 2 children
+redone: g#pair created with 2 children
+g#pair ungrouped
+svg (800x600)
+└── g#parent
+    ├── rect#a  x=1 y=2 width=3 height=4
+    └── circle#b  cx=5 cy=6 r=7
+undone: g#pair ungrouped
+redone: g#pair ungrouped
+error: cannot ungroup top-level container: parent
+rect#a  parent=g#parent
+  x=1 y=2 width=3 height=4
+```
+
+### 20.4 边界与一致性自查
+
+四层依赖及 Command + Composite + 快照方案保持不变，无需修订 M1 架构。新增领域接口是已有树管理职责的补充。递归树复制和完整历史快照的规模限制依旧存在；审计中的输出控制字符、格式评分风险等非阻塞事项未在本轮处理。
+
+M1-M5A-AUDIT.md 与对应黑盒脚本保持历史原样；旧脚本含“group/ungroup 未实现”阶段断言，不能作为 M5-B 当前验收脚本。来源不明的 svg-editor-audit.zip 未读取、修改或删除。未实现 read/save、序列化、插件；未执行暂存、提交、推送或标签操作。M5-A/M5-B 留在工作区等待审核。
+
+## 21. M5 最终代码验收（2026-10-28）
+
+重新对照课程第 3、4.2、4.3、6 节，审查 SvgDocument、五个独立结构 Command、CommandDispatcher 以及相关 Group/历史契约。未发现本轮需要修复的实际功能缺陷，未修改生产代码、未进行架构重构。
+
+- group 同父不相邻成员按原树顺序收编、放最早成员位置；跨父按已审核约定放根末尾。祖先/后代同时选择使用课程指定错误。
+- ungroup 的候选兄弟列表为“原组之前 + 直接子节点 + 原组之后”，不会把孩子追加到末尾。嵌套子树、显式属性与未选兄弟顺序保留；空组移除自身；根级组拒绝解散。
+- addto 按 gid/id 顺序追加；front/back 仅在当前父级排序。五条命令均只调用一次统一 execute；命令仅保存参数，历史在执行及克隆成功后才变更。
+- 已有测试未删除。相对 M4，旧测试唯一变更为 help 的五条已实现状态；新测试入口为增量追加，没有移除旧文件或削弱其他断言。
+
+本轮实际重新执行：npm.cmd run typecheck、npm.cmd run build、npm.cmd test 全部退出 0；151 项通过、0 失败、0 跳过。git diff --check 通过（仅 LF/CRLF 提示）。数量保持 151，没有为验收凑测试数量。
+
+额外直接启动编译后 dist/main.js 回放 34 条命令，检查 9 次 tree 输出，包括不相邻逆序参数分组、move、跨父 addto、front/back、嵌套 ungroup、delete、连续 undo/redo、祖先后代错误后 redo 保留、新编辑清空 redo、跨父 group、根级解散拒绝、空组解散；进程 EOF 退出 0，stderr 为空。临时验收脚本第一次使用手写输出索引时偏移一位，误把 tree 输出与错误文本比较；改为按命令及 tree 次序定位后全部通过。该问题属于临时验证脚本，非生产程序缺陷，没有据此修改生产代码。
+
+提交范围限定为 M5 的五个命令、SvgDocument、Dispatcher、两份新测试、help 测试、package.json 和本 README，共 12 个文件。已检查暂存前状态、文件内容及常见凭据模式，未发现凭据；node_modules/dist/.npm-cache/日志已被忽略。独立审计报告、其黑盒脚本和 svg-editor-audit.zip 不纳入本次提交，也不删除或修改。
+
+按用户授权安排第五次提交 `feat: implement hierarchy and grouping commands` 并推送现有 origin/master；具体提交哈希及实时远程核对结果由本轮执行报告提供，避免在提交前编造推送结果。既有非阻塞审计风险仍保留，没有发现阻塞下一阶段的问题；本轮不开始 M6、不创建 final 标签。

@@ -4,6 +4,11 @@ import { MoveCommand } from "./commands/MoveCommand.js";
 import { ScaleCommand } from "./commands/ScaleCommand.js";
 import { SetCommand } from "./commands/SetCommand.js";
 import { DeleteCommand } from "./commands/DeleteCommand.js";
+import { AddToCommand } from "./commands/AddToCommand.js";
+import { FrontCommand } from "./commands/FrontCommand.js";
+import { BackCommand } from "./commands/BackCommand.js";
+import { GroupCommand } from "./commands/GroupCommand.js";
+import { UngroupCommand } from "./commands/UngroupCommand.js";
 import { NumericArgument } from "./NumericArgument.js";
 
 export interface CommandRequest {
@@ -25,11 +30,11 @@ export class CommandDispatcher {
     { name: "move", syntax: "move <id> <dx> <dy>", min: 3, max: 3, implemented: true, needsDocument: true },
     { name: "scale", syntax: "scale <id> <factor>", min: 2, max: 2, implemented: true, needsDocument: true },
     { name: "set", syntax: "set <id> <attr> <value>", min: 3, max: 3, implemented: true, needsDocument: true },
-    { name: "group", syntax: "group <newGid> <id1> <id2>…", min: 2, max: Infinity, implemented: false, needsDocument: true },
-    { name: "ungroup", syntax: "ungroup <gid>", min: 1, max: 1, implemented: false, needsDocument: true },
-    { name: "addto", syntax: "addto <gid> <id>", min: 2, max: 2, implemented: false, needsDocument: true },
-    { name: "front", syntax: "front <id>", min: 1, max: 1, implemented: false, needsDocument: true },
-    { name: "back", syntax: "back <id>", min: 1, max: 1, implemented: false, needsDocument: true },
+    { name: "group", syntax: "group <newGid> <id1> <id2>…", min: 2, max: Infinity, implemented: true, needsDocument: true },
+    { name: "ungroup", syntax: "ungroup <gid>", min: 1, max: 1, implemented: true, needsDocument: true },
+    { name: "addto", syntax: "addto <gid> <id>", min: 2, max: 2, implemented: true, needsDocument: true },
+    { name: "front", syntax: "front <id>", min: 1, max: 1, implemented: true, needsDocument: true },
+    { name: "back", syntax: "back <id>", min: 1, max: 1, implemented: true, needsDocument: true },
     { name: "tree", syntax: "tree [id]", min: 0, max: 1, implemented: true, needsDocument: true },
     { name: "show", syntax: "show <id>", min: 1, max: 1, implemented: true, needsDocument: true },
     { name: "undo", syntax: "undo", min: 0, max: 0, implemented: true, needsDocument: true },
@@ -64,6 +69,16 @@ export class CommandDispatcher {
         return this.create(request);
       case "delete":
         return this.session.execute(new DeleteCommand(request.args[0]));
+      case "group":
+        return this.session.execute(new GroupCommand(request.args[0], request.args.slice(1)));
+      case "ungroup":
+        return this.session.execute(new UngroupCommand(request.args[0]));
+      case "addto":
+        return this.session.execute(new AddToCommand(request.args[0], request.args[1]));
+      case "front":
+        return this.session.execute(new FrontCommand(request.args[0]));
+      case "back":
+        return this.session.execute(new BackCommand(request.args[0]));
       case "canvas": {
         if (request.args.length === 1) throw new Error(`invalid arguments; usage: ${entry.syntax}`);
         if (request.args.length === 0) {

@@ -4,7 +4,7 @@
 
 使用 TypeScript 面向对象设计实现命令行 SVG 编辑器，重点是 Command、Composite、模块依赖和真实的 AI 协作过程。
 
-**M1 已本地提交（82eca1b）；M2-A 和 M2-B 已实现、通过架构审核及最终验收，纳入本次 M2 本地提交。** 入口仍只输出环境提示。已实现六种图形、文档树、图形工厂与深拷贝；REPL、编辑命令、撤销重做及 SVG 解析尚未实现，M3 尚未开始。下文的应用层对象仍属于设计方案。
+**M1（82eca1b）与 M2（6997b13）已本地提交，M3-A 已审核通过，M3-B 已实现并等待审核。** 当前 SVG REPL 支持 help、init、create、tree、show、undo、redo，其中只有创建是可撤销编辑。M4 的其他编辑、文件读写与插件尚未实现。当前完整测试结果为 95 项通过；历史阶段的测试结果保留不变，详见末尾记录。
 
 需求依据：课程 `phase_cli_1.md`，本机原件位于 `D:/learning/读研/1.1/高级软件开发/phase_cli_1.md`。本说明不替代原始要求。
 
@@ -32,7 +32,7 @@
 
 | 命令 | 用途 |
 | --- | --- |
-| npm run cli | 使用 tsx 运行当前环境检查入口 |
+| npm run cli | 使用 tsx 启动基础 SVG CLI |
 | npm run typecheck | 检查生产代码和测试代码，不生成文件 |
 | npm run build | 将 src 编译到 dist，不编译测试到发布目录 |
 | npm test | 使用 Node 内置 node:test 和已有 tsx 运行 TypeScript 测试 |
@@ -44,10 +44,10 @@ F5 沿用已有配置，先编译再调试。打开 examples/preview.svg 可用 
 assignment1/
 ├── .vscode/                 # 已有任务、调试和编辑器配置
 ├── src/
-│   ├── main.ts              # 临时环境入口；未来只组装对象
-│   ├── EnvironmentCheck.ts  # 临时检查类，不是业务模型
-│   ├── cli/.gitkeep
-│   ├── application/.gitkeep
+│   ├── main.ts              # 组装会话、分发器、解析器、显示器与 REPL
+│   ├── cli/                 # CliApplication、CommandParser、ConsoleRenderer
+│   ├── application/         # EditorSession、CommandDispatcher、CommandHistory、DocumentFormatter
+│   │   └── commands/        # EditCommand 接口、CreateCommand
 │   ├── domain/
 │   │   ├── Shape.ts
 │   │   ├── ShapeFactory.ts
@@ -55,7 +55,9 @@ assignment1/
 │   │   └── shapes/          # Rect.ts、Circle.ts、Ellipse.ts、Line.ts、Text.ts、Group.ts
 │   └── infrastructure/.gitkeep
 ├── tests/
-│   ├── EnvironmentCheck.test.ts
+│   ├── EnvironmentCheck.test.ts  # 已更新为 CLI 启动/EOF 测试
+│   ├── cli/Cli.test.ts
+│   ├── application/CreateHistory.test.ts
 │   └── domain/             # Shapes.test.ts、Tree.test.ts
 ├── examples/preview.svg
 ├── doc/README.md
@@ -69,7 +71,7 @@ assignment1/
 
 .gitkeep 使 Git 保留空目录，不创建空业务类；添加实际文件后可移除。node_modules、dist、.npm-cache 和日志已忽略。项目内 npm 缓存沿用此前解决写权限问题的配置。
 
-保留原 tsconfig.json 的严格检查、NodeNext、sourceMap 和 dist/main.js 输出布局。tsconfig.test.json 继承它，将 rootDir 放宽到项目根并启用 noEmit，覆盖 src 和 tests。测试脚本显式指定入口测试、叶子测试及树模型测试三个文件，避免 Windows shell 通配符差异；新增测试文件时同步调整入口。
+保留原 tsconfig.json 的严格检查、NodeNext、sourceMap 和 dist/main.js 输出布局。tsconfig.test.json 继承它，将 rootDir 放宽到项目根并启用 noEmit，覆盖 src 和 tests。测试脚本显式指定入口、CLI、创建历史、叶子及树模型五个测试文件，避免 Windows shell 通配符差异；新增测试文件时同步调整入口。
 
 ## 3. 模块划分与依赖规则
 
@@ -123,7 +125,7 @@ assignment1/
 为避免快照恢复后对象引用失效，约定：
 
 - EditorSession 是稳定对象，持有可替换的当前文档。
-- 命令长期只保存 id、不可变参数和稳定的 session；不缓存 Shape、Group、旧文档或子节点数组。查询从当前文档取得副本，编辑通过当前文档的按 id 方法执行。
+- 命令长期只保存 id、不可变参数；需要会话引用时只能保存稳定的 session，不缓存 Shape、Group、旧文档或子节点数组。M3-B 由 session 在执行时提供候选文档，CreateCommand 无需保存 session。查询取得副本，编辑通过文档受控方法执行。
 - CLI 不缓存可修改的领域对象，对外提供只读结果。
 - 深拷贝保留实际类和方法，不能把 JSON.parse/stringify 得到的数据袋当作领域模型。
 - 记录和恢复都要复制，避免新编辑修改历史快照；父子关系、顺序、属性缺省状态都要保留。
@@ -211,9 +213,9 @@ Shape 提供 move、scale、set 等共同接口；Rect、Circle 等是叶子，G
 
 ## 10. 一致性自查与质量保证
 
-当前四层目录与计划一致。M2-B 的图形、文档与工厂仅依赖领域层，没有反向依赖 CLI、应用或基础设施；其余业务模块尚未实现。EnvironmentCheck 暂留 src 根目录作为工程基线，接入真实 CLI 时需更新入口及相应测试。
+当前四层目录与计划一致。图形、文档与工厂仅依赖领域层，没有反向依赖 CLI、应用或基础设施；应用层管理会话、编辑命令、历史和查询，CLI 通过应用层访问业务。M3-A 已移除临时 EnvironmentCheck 类，入口测试改为验证真实 CLI 启动与 EOF；M1 原测试结果保留为历史记录。
 
-最小测试启动真实 src/main.ts，检查退出码、环境提示、中文输出及“实验命令尚未实现”说明。它验证 TypeScript 加载、入口连接和测试框架，不验证图形业务。
+当前入口测试启动真实 src/main.ts，检查欢迎语、提示符和空输入 EOF 正常退出。M1 阶段的环境检查与中文输出结果保留在下方历史记录中；领域、应用及交互行为由各阶段测试分别验证。
 
 ### M1 实际验证记录（2026-10-26）
 
@@ -338,3 +340,119 @@ ShapeFactory 是当前唯一按图形类型名分派的位置，已按课程要�
 | git diff --check | 退出码 0，无空白错误 |
 
 提交范围为领域源码、两份领域测试、测试脚本调整、领域占位文件移除及本文档。检查未发现密码、Token、私钥或证书；node_modules、dist、.npm-cache 和日志仍由 .gitignore 排除。提交信息为 feat: implement SVG domain model and composite shapes，仅本地提交，不推送、不创建 final 标签、不开始 M3。实际提交哈希以 Git 日志为准，避免在提交文件中预写尚未生成的哈希。
+
+## 14. M3-A：基础 CLI 交互（2026-10-27）
+
+### 实现范围与职责
+
+- CliApplication 管理 readline 生命周期、逐行事件、单条错误捕获、提示符和退出清理。
+- CommandParser 解析空白分隔、双引号、空字符串及转义，输出应用层定义的不可变 CommandRequest；不访问文档。
+- ConsoleRenderer 负责欢迎语、提示符文本、终端写入及单行 error: 格式。
+- EditorSession 私有持有当前 SvgDocument。init 先构造验证新文档再替换；describe 只返回冻结描述，旧描述不受重复 init 影响。
+- CommandDispatcher 集中维护命令目录、通用参数个数、是否需要文档和实现状态，仅执行 help/init。未实现命令明确报错；没有提前生成编辑 Command 类。
+- main.ts 只创建并连接上述对象，移除临时 EnvironmentCheck 类。原入口测试文件保留名称，改为真实 CLI 的启动/EOF 验证。
+
+依赖仍为 cli → application → domain，CLI 不导入领域类，领域代码及既有领域测试无修改。命令名分派仍只在 CommandDispatcher，图形名分派仍只在 ShapeFactory，均保留为后续重构点。当前轻量分发结果是显示文本，未引入通用消息框架。解析器负责词法及引号语法，命令参数数量和 init 数字转换集中在分发入口，避免再建第二套命令名分派。
+
+### 输入约定与错误优先级
+
+空行和去除前导空白后以 # 开头的行被跳过；其他位置的 # 保留，包含 #ffffff 颜色。双引号参数保留内部空格、中文及空字符串。引号内支持转义双引号和反斜杠，其他反斜杠保留；引号参数必须由空白分隔，不支持与未引用片段直接拼接。未闭合引号明确报错。
+
+init 不带参数使用 800×600；一个参数视为宽度，高度默认 600；两个参数设置宽高。几何文本只接受十进制数（含小数和科学记数法），拒绝空串和十六进制；尺寸正数/有限性沿用 SvgDocument 校验。超过两个参数报 usage 错误，失败不替换已有文档。单参数行为是本阶段对原先歧义的明确实现约定。
+
+help 不要求文档，列出全部 19 个命令及语法，help/init 标为已实现，其余 17 个标为暂未实现，并补充六种 create 类型参数说明。
+
+错误检查顺序为：词法错误 → 未知命令 → 需要文档但尚未初始化 → 基本参数个数错误 → 已实现功能执行/未实现提示。read 是建立文档的命令，不要求当前已有文档，但本阶段只报尚未实现。未实现命令仅检查基本参数数量，不假装完整解析其类型参数或执行成功。尚无 Undo/Redo，init 后的历史禁用机制留到后续阶段。
+
+### REPL 与退出
+
+使用 readline 的 line 事件同步消费本阶段命令，不使用反复 question 等待下一行的方式，避免一次性管道输入时漏掉行。交互 TTY 启用终端编辑；管道使用非终端模式，仍输出欢迎语和 svg> 提示符。空行/注释后继续显示提示符。单条失败输出 error: 后继续处理下一行。
+
+EOF 由 readline close 结束；Ctrl+C 关闭 reader，移除进程 SIGINT 监听器、暂停输入并释放拥有的 TTY 输入句柄。该 REPL 是一次性的输入消费者；不会关闭调用方注入的普通非 TTY 流。错误统一写到当前输出流，便于本阶段会话回放。
+
+### 验证与真实交互记录
+
+最终重新执行 npm.cmd run typecheck、npm.cmd run build、npm.cmd test，均退出 0。测试总计 73 项通过、0 失败、0 跳过：61 项 M2 领域测试保持原样通过，1 项原入口测试更新为真实 CLI EOF，新增 11 项解析/应用/REPL 测试。git diff --check 通过。
+
+覆盖默认/指定/单参数/重复 init、非法尺寸保持原文档、双引号和空参数、注释和颜色、未闭合引号、错误后继续、全部帮助状态、未知与未实现区分、空输入 EOF、多行管道/CRLF/末行无换行、模拟终端 Ctrl+C 及信号监听清理。
+
+真实 Windows PTY 中运行编译后的 node dist/main.js，确认欢迎语、提示符、无文档错误、默认及指定 init、未知命令、带空格文字及颜色的未实现提示、完整 help、未闭合引号和参数数量错误后的恢复。实际输出节选：
+
+```text
+svg-editor 0.1 — type 'help' for commands
+svg> tree
+error: no document. use 'init' or 'read' first
+svg> init
+canvas 800x600 created
+svg> init 400 200
+canvas 400x200 created
+svg> wat
+error: unknown command: wat
+svg> create text t1 20 40 "Hello World"
+error: command not implemented yet: create
+svg> init 1 2 3
+error: invalid arguments; usage: init [w] [h]
+svg> init 320
+canvas 320x600 created
+```
+
+验证中沙箱 PTY 在 Ctrl+C/终端 EOF 后未返回结束状态；不能仅凭这种现象断言应用没有退出。检查退出路径后补充显式暂停/释放 TTY 输入，并经授权在沙箱外重复真实终端测试：启动、init、Ctrl+C 后 PowerShell 明确打印 CLI_EXIT_CODE=0。模拟流测试不能替代真实终端验证；已将这一差异如实记录。管道 EOF 的实际子进程退出码由自动测试确认。
+
+M3-A 没有新增依赖或修改领域模型；未实现 create/tree/show 业务、编辑、历史、文件读写或插件。本轮仅保留工作区改动供审核，不提交、不推送、不创建标签，不开始 M3-B。
+
+## 15. M3-B：创建、查询与 Command 最小闭环（2026-10-28）
+
+### 实现与架构
+
+M3-A 经用户审核后进入本阶段。上方各阶段记录描述当时的实现和测试，不代表当前功能仍然缺失。当前 help 将 help/init/create/tree/show/undo/redo 标为已实现，其余 12 个命令继续明确提示尚未实现。
+
+新增 EditCommand 接口、CreateCommand、CommandHistory 和 DocumentFormatter。CreateCommand 保存复制后的只读参数、类型、id 和目标容器 id，通过 ShapeFactory 创建图形并调用 SvgDocument.add；不缓存图形、旧文档或可变会话内容。EditorSession.execute 是统一编辑入口，CommandDispatcher 只解析尾部归属并构造命令，不承载创建业务。命令执行时接收候选文档，因此不需要额外保存 session 引用，也不会因撤销替换文档而引用失效。
+
+CommandHistory 通过 SvgDocument.clone 保存前后快照。执行过程先复制当前文档，在候选副本上执行命令，再复制结果，全部成功后才追加历史并清空 redo，最后由 session 发布文档。失败即丢弃候选副本；即使命令先改候选树后抛错，也不污染当前文档或历史。每次成功 create 是一个撤销单元。undo/redo 恢复快照副本，保留实际类行为、顺序和嵌套关系；redo 不重新执行创建。成功 init 清空历史并禁用 undo/redo，报原文规定的 undo not allowed after io command；只有下一次成功编辑解除禁用，失败 init 保留原文档和历史。tree/show/help 不进入历史。
+
+DocumentFormatter 使用只读描述递归输出层级和属性，不按类型 switch。tree 支持全文档或子树，保留真实子节点顺序；show 展示几何、显式样式、文本及父容器，顶层标为 parent=svg。几何使用领域属性全名 width/height，没有额外缩写映射。
+
+领域模型无需重设；唯一领域改动是 ShapeFactory 增加 createFromTokens，使数字字符串转换与已有类型分派共用同一个创建路径。几何合法性仍由具体图形校验，旧 create 接口仍保留严格数值调用。CLI 不导入领域对象，依赖仍为 cli → application → domain。无新增依赖或插件框架。
+
+### 解析约定与错误
+
+支持 rect/circle/ellipse/line/text/g 和尾部 in 容器，包括嵌套 g；省略 fill/stroke 时保持缺省。解析器额外保存引号标记，以区别文本参数 "in" 与未加引号的尾部 in 关键字。中文、空格、空文本、颜色 #ffffff 均保留。创建参数中的数字只接受十进制形式（含科学记数法），有限性与几何范围继续交给领域类校验。
+
+重复 id、非法尺寸、未知类型（包括 box）、目标不存在及目标非容器均明确报错。原文的 unknown shape type、no such container、not a container 语义保留。历史已经启用但栈为空时分别报 nothing to undo / nothing to redo；这是原文未详细规定的提示约定。
+
+### 实际测试与协作记录
+
+新增 tests/application/CreateHistory.test.ts 共 22 项应用及真实 CLI 子进程测试；原 M3-A 测试中“create 尚未实现”的预期更新为创建成功，帮助状态同步更新，原领域测试保持不变。完整测试为 95 项（73 项既有测试加 22 项新增），全部通过、0 失败、0 跳过。
+
+覆盖六类型、in 归属与顺序、重复 id、非法参数/容器/类型、tree/show 输出、多步撤销重做、新编辑清空 redo、失败保留 redo、init 禁用及成功编辑解禁、失败 init、快照具体类型与隔离、候选文档修改后抛错的原子性、真实多行 REPL/EOF。额外检查命令参数副本，以及外部修改历史返回值不会污染快照。
+
+npm.cmd run typecheck、npm.cmd run build、npm.cmd test 均退出 0。git diff --check 曾发现 ShapeFactory 文件末尾空行，已清理；最终检查退出码 0，无空白错误（仅有 LF/CRLF 换行提示）。通过编译后的 node dist/main.js 实际运行多行管道会话，退出码 0，包含 init、创建容器/矩形/文本、tree/show、undo/redo。管道不会回显输入，以下按输入和实际输出整理节选：
+
+```text
+svg> init 800 600
+canvas 800x600 created
+svg> create g scene
+g#scene created
+svg> create rect r1 10 20 100 50 red in scene
+rect#r1 created in g#scene
+svg> create text title 20 40 "Hello World" in scene
+text#title created in g#scene
+svg> tree
+svg (800x600)
+└── g#scene
+    ├── rect#r1  x=10 y=20 width=100 height=50 fill=red
+    └── text#title  x=20 y=40 text="Hello World"
+svg> show r1
+rect#r1  parent=g#scene
+  x=10 y=20 width=100 height=50 fill=red
+svg> undo
+undone: text#title created in g#scene
+svg> redo
+redone: text#title created in g#scene
+```
+
+### 取舍、风险与阶段边界
+
+前后完整快照和额外隔离副本使失败原子性更容易理解和验证，但每次编辑需要复制整份文档，历史随编辑次数增长；本阶段没有容量上限。递归查询、输出和克隆仍不保证极深树的栈安全。当前适用于小型课程文档，后续若需要优化应保留隔离契约。四层方案不变，只将 Command 的文档获取方式细化为执行时注入候选文档。
+
+M1/M2 已本地提交；M3-A 和 M3-B 当前均保留在工作区等待审核。本轮不暂存、不提交、不推送、不创建标签。没有实现 M4 编辑命令、结构命令、文件读写或插件；这些命令仍提示尚未实现。

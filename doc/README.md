@@ -4,7 +4,7 @@
 
 使用 TypeScript 面向对象设计实现命令行 SVG 编辑器，重点是 Command、Composite、模块依赖和真实的 AI 协作过程。
 
-**M1（82eca1b）与 M2（6997b13）已本地提交，M3-A 已审核通过，M3-B 已实现并等待审核。** 当前 SVG REPL 支持 help、init、create、tree、show、undo、redo，其中只有创建是可撤销编辑。M4 的其他编辑、文件读写与插件尚未实现。当前完整测试结果为 95 项通过；历史阶段的测试结果保留不变，详见末尾记录。
+**M1（82eca1b）、M2（6997b13）、M3（7607642）已提交，用户确认已推送 GitHub。M4-A/M4-B 已审核，M4 最终验收通过，用户已授权本地提交与推送；提交及远程结果以 Git 记录为准。** 当前 SVG REPL 支持 help、init、canvas、create、move、scale、set、delete、tree、show、undo、redo。结构调整、文件读写与插件尚未实现。当前完整测试结果为 124 项通过；历史阶段的测试结果保留不变，详见末尾记录。
 
 需求依据：课程 `phase_cli_1.md`，本机原件位于 `D:/learning/读研/1.1/高级软件开发/phase_cli_1.md`。本说明不替代原始要求。
 
@@ -22,7 +22,7 @@
 
 不实现 box、ShapeProvider 插件、动态加载、GUI 或路径寻址；create box 按未知类型报错。
 
-交付需 Git 分步提交并推送远程仓库，最终提交在截止时间前打 final 标签。本文件须包括架构、过程、一致性自查及质量保证。M1 不执行提交、推送或标签操作；远程仓库与截止时间待用户提供。
+交付需 Git 分步提交并推送远程仓库，最终提交在截止时间前打 final 标签。本文件须包括架构、过程、一致性自查及质量保证。远程仓库为 https://github.com/kkkkkeeee/svg-editor-lab1；截止时间待用户提供。本轮不提交、推送或创建标签。
 
 ## 2. 环境、脚本与目录
 
@@ -46,8 +46,8 @@ assignment1/
 ├── src/
 │   ├── main.ts              # 组装会话、分发器、解析器、显示器与 REPL
 │   ├── cli/                 # CliApplication、CommandParser、ConsoleRenderer
-│   ├── application/         # EditorSession、CommandDispatcher、CommandHistory、DocumentFormatter
-│   │   └── commands/        # EditCommand 接口、CreateCommand
+│   ├── application/         # EditorSession、CommandDispatcher、CommandHistory、DocumentFormatter、NumericArgument
+│   │   └── commands/        # EditCommand 接口、CreateCommand、MoveCommand、ScaleCommand、SetCommand、DeleteCommand
 │   ├── domain/
 │   │   ├── Shape.ts
 │   │   ├── ShapeFactory.ts
@@ -57,7 +57,7 @@ assignment1/
 ├── tests/
 │   ├── EnvironmentCheck.test.ts  # 已更新为 CLI 启动/EOF 测试
 │   ├── cli/Cli.test.ts
-│   ├── application/CreateHistory.test.ts
+│   ├── application/         # CreateHistory.test.ts、BasicEdit.test.ts、DeleteCanvas.test.ts
 │   └── domain/             # Shapes.test.ts、Tree.test.ts
 ├── examples/preview.svg
 ├── doc/README.md
@@ -71,7 +71,7 @@ assignment1/
 
 .gitkeep 使 Git 保留空目录，不创建空业务类；添加实际文件后可移除。node_modules、dist、.npm-cache 和日志已忽略。项目内 npm 缓存沿用此前解决写权限问题的配置。
 
-保留原 tsconfig.json 的严格检查、NodeNext、sourceMap 和 dist/main.js 输出布局。tsconfig.test.json 继承它，将 rootDir 放宽到项目根并启用 noEmit，覆盖 src 和 tests。测试脚本显式指定入口、CLI、创建历史、叶子及树模型五个测试文件，避免 Windows shell 通配符差异；新增测试文件时同步调整入口。
+保留原 tsconfig.json 的严格检查、NodeNext、sourceMap 和 dist/main.js 输出布局。tsconfig.test.json 继承它，将 rootDir 放宽到项目根并启用 noEmit，覆盖 src 和 tests。测试脚本显式指定入口、CLI、创建历史、基础编辑、删除画布、叶子及树模型七个测试文件，避免 Windows shell 通配符差异；新增测试文件时同步调整入口。
 
 ## 3. 模块划分与依赖规则
 
@@ -456,3 +456,133 @@ redone: text#title created in g#scene
 前后完整快照和额外隔离副本使失败原子性更容易理解和验证，但每次编辑需要复制整份文档，历史随编辑次数增长；本阶段没有容量上限。递归查询、输出和克隆仍不保证极深树的栈安全。当前适用于小型课程文档，后续若需要优化应保留隔离契约。四层方案不变，只将 Command 的文档获取方式细化为执行时注入候选文档。
 
 M1/M2 已本地提交；M3-A 和 M3-B 当前均保留在工作区等待审核。本轮不暂存、不提交、不推送、不创建标签。没有实现 M4 编辑命令、结构命令、文件读写或插件；这些命令仍提示尚未实现。
+
+## 16. M4-A：基础编辑命令（2026-10-28）
+
+### 实现与设计取舍
+
+用户确认 M1～M3 已提交并推送，本轮仅完成基础编辑，不提交或推送。新增 MoveCommand、ScaleCommand、SetCommand，每类一文件、实现既有 EditCommand，保存 id 和不可变参数，不缓存 Shape 或文档。CommandDispatcher 启用三条命令，统一调用 EditorSession.execute；CreateCommand、EditorSession、CommandHistory 及领域层无需修改。
+
+MoveCommand 调用 SvgDocument.move，ScaleCommand 调用 SvgDocument.scale，叶子和 Group 的差异由原有多态处理；移动允许负数与小数，缩放因子必须有限且为正。所有位置及尺寸随缩放改变，stroke-width 是样式，沿用领域行为不参与几何缩放。输出使用通用 moved by / scaled by 摘要，避免为不同图形构造新的类型分派。
+
+SetCommand 先查询目标的独立副本，依据只读描述中属性的数值类型识别几何输入；stroke-width 可能缺省，因此显式作为数值属性处理。字符串 fill/stroke/text 不转换、不裁剪内容。白名单及范围仍由领域图形的 set 校验：Group 只接受公共样式，其他类型只接受自己的几何属性；id、transform、font-size、label 等拒绝。没有添加按图形类型 switch 或重复维护类型到白名单的表。该方案依赖现有契约：全部几何属性始终出现在 describe 中且值为 number；未来若引入可缺省数值几何属性，需重新明确该输入契约。
+
+NumericArgument 是小型应用层数值文本转换类，供本次三个命令使用：接受十进制、小数和科学记数法，拒绝空串、十六进制、单位、NaN、Infinity、溢出的数值文本。原有 init/create 转换保持不动，避免扩大本轮范围。数值范围与计算结果合法性仍由领域层验证。
+
+成功编辑沿用完整前后快照，每条命令一个撤销单元。候选文档上的几何运算或 set 失败时不发布状态，也不更新历史或清空 redo。成功的新编辑清空 redo；恢复后按 id 取得当前对象，因此重用命令不会指向旧图形。Group 样式只写在组自身，孩子显式样式不被覆盖，缺省样式也不主动展开。
+
+### 验证与真实问题
+
+新增 tests/application/BasicEdit.test.ts，18 项测试，总计 113 项（原 95 项保留）。覆盖五种叶子的移动、缩放和全部几何白名单，公共样式，中文/空格/空文本/数字文本，嵌套组及顺序，样式继承表示，数值非法输入，未知属性/id，参数数量，多步撤销重做、新编辑清空 redo、失败保留 redo、命令复用和真实 REPL 多行子进程。
+
+溢出反例特意将正常孩子排在前、极大坐标后代放在后：move 或 scale 后者溢出时，整份文档必须与操作前相同，并且原 redo 仍能恢复。这也验证了已有 Composite 和历史隔离协同工作。
+
+原 CLI 测试中“move 尚未实现”的预期已随阶段推进改为明确的目标不存在错误或成功摘要；help 状态改为已实现，同时保留 save/read/delete 等未实现命令的拒绝断言。没有删除旧测试或放宽错误匹配来掩盖失败，领域测试未修改。
+
+首次测试执行 113 项通过，但类型检查发现新增测试使用 assert.throws(fn, undefined, message) 不符合当前 @types/node 的重载；改为明确要求 Error 实例后重新运行。最终 npm.cmd run typecheck、npm.cmd run build、npm.cmd test 均退出 0；113 项通过、0 失败、0 跳过。git diff --check 最终检查无空白错误，仅有 Git 的 LF/CRLF 换行提示。
+
+另外实际运行编译后的 node dist/main.js，通过管道输入多行命令，正常 EOF 退出码为 0。以下将输入与实际输出整理在一起：
+
+```text
+svg> init
+canvas 800x600 created
+svg> create g scene
+g#scene created
+svg> create rect r 10 20 100 50 red in scene
+rect#r created in g#scene
+svg> move scene -5 .5
+g#scene moved by (-5,0.5)
+svg> scale scene 2
+g#scene scaled by 2
+svg> set r fill #ffffff
+rect#r updated: fill="#ffffff"
+svg> undo
+undone: rect#r updated: fill="#ffffff"
+svg> redo
+redone: rect#r updated: fill="#ffffff"
+svg> scale scene 0
+error: scale factor must be positive
+svg> show r
+rect#r  parent=g#scene
+  x=10 y=41 width=200 height=100 fill=#ffffff
+```
+
+### 一致性与剩余风险
+
+四层依赖方向不变，没有新增分发中心。CLI 不导入领域模型；三个命令调用领域受控接口，未改变 CreateCommand 或已有历史行为。无需修订总体架构，只补充数值文本转换与 set 输入类型识别的具体约定。无新依赖。
+
+完整快照内存开销、历史无容量上限、极深树递归栈风险仍在；JavaScript 浮点数也有精度限制，目前验证有限性，不提供高精度十进制运算。零位移或设置同值仍按一次成功编辑记录历史。删除、canvas、结构调整、SVG 读写和插件均未实现，本轮改动保留工作区等待审核。
+
+## 17. M4-B：删除与画布管理（2026-10-28）
+
+### 实现与历史边界
+
+M4-A 经用户审核后继续本阶段。新增 DeleteCommand，实现原 EditCommand，仅保存 id，通过 SvgDocument.delete 一次删除目标，返回实际类型的 deleted 摘要；不使用工厂或图形类型分派。容器连同全部后代删除，整个操作只调用一次 EditorSession.execute，所以只有一个撤销单元。恢复依赖已有完整文档快照，保留父容器、兄弟顺序、样式缺省、文本和具体类行为。
+
+EditorSession 最小新增 resizeCanvas：克隆当前文档，在候选文档上调用 resize 并生成返回描述，成功后发布文档并调用原 CommandHistory.resetAfterIo。失败时当前文档及历史均不变。没有新增 CanvasCommand，没有修改领域模型、历史管理器或 init。复制整份文档有开销，但沿用既有候选文档提交方式，避免失败后部分发布状态。
+
+CommandDispatcher 启用 delete 与 canvas，帮助现有 12 项已实现、7 项未实现。canvas 无参数通过只读 describe 查询宽高，不进入历史、不改变禁用状态。两个参数复用 init 的数值文本转换，尺寸范围仍由 SvgDocument 校验；成功输出 canvas WxH resized，查询输出 canvas WxH。只传一个参数拒绝，usage 为 canvas [w h]，两个可选尺寸视为一组；init 单参数仍使用默认高度 600。原文没有定义 canvas 单参数修改规则，因此按用户明确要求拒绝，避免意外重置高度。
+
+成功 resize（即使尺寸和原来相同）清空 undo/redo 并禁用历史；之后失败编辑不能解除禁用。下一次成功 create/move/scale/set/delete 开启新的历史，撤销到该编辑之前仍是调整后的画布，不可跨越尺寸修改边界。非法尺寸、错误参数数量、失败删除不会清空旧 redo。无文档时遵循原文 no document 错误。
+
+### 真实过程及验证
+
+现有 SvgDocument.delete、resize 与快照机制已经满足本阶段语义，没有发现需要重构的架构冲突。旧 help 状态随实现更新，M4-A 实际会话测试中的 delete 未实现断言改为准确的 rect#r deleted，保留其他全部断言；新会话仍检查 save 尚未实现。没有删掉旧测试或放宽断言。
+
+新增 tests/application/DeleteCanvas.test.ts，11 项测试覆盖叶子与多层子树删除、一次撤销恢复父级和顺序、反复 undo/redo、具体类行为、删除后复用 id、独立命令复用、五类编辑混合历史、查询不影响历史、非法尺寸/参数、成功修改清空 redo、失败编辑维持禁用、下一次编辑解禁、原图形树不变、同尺寸边界、init 单参数及真实多行 REPL。测试通过完整描述相等来检查状态，同时以 redo 实际执行来证明失败没有破坏历史。
+
+本轮首次运行 npm.cmd run typecheck、npm.cmd run build、npm.cmd test 均成功，退出码 0；共 124 项通过（原 113 项加新增 11 项）、0 失败、0 跳过。git diff --check 无空白错误，仅有 LF/CRLF 提示。没有新增依赖。
+
+另在编译后的 node dist/main.js 执行真实多行管道会话，EOF 正常退出，退出码 0。按输入/输出整理节选（期间也执行 redo、undo 验证重复恢复）：
+
+```text
+svg> init
+canvas 800x600 created
+svg> canvas
+canvas 800x600
+svg> create g scene
+g#scene created
+svg> create rect r 1 2 3 4 in scene
+rect#r created in g#scene
+svg> delete scene
+g#scene deleted
+svg> undo
+undone: g#scene deleted
+svg> show r
+rect#r  parent=g#scene
+  x=1 y=2 width=3 height=4
+svg> canvas 400 300
+canvas 400x300 resized
+svg> undo
+error: undo not allowed after io command
+svg> delete missing
+error: no such shape: missing
+svg> redo
+error: undo not allowed after io command
+svg> canvas 100
+error: invalid arguments; usage: canvas [w h]
+svg> canvas
+canvas 400x300
+svg> delete r
+rect#r deleted
+svg> undo
+undone: rect#r deleted
+```
+
+### 架构、自查与状态
+
+四层架构不变；应用层编排删除和尺寸修改，领域层仍负责树结构及尺寸合法性，CLI 不直接操作领域字段。CommandHistory、CreateCommand 及领域源码保持不变。此前完整快照的内存、递归深度与浮点精度风险仍然存在，本轮没有增加通用事务或插件设施。
+
+M4-A 与 M4-B 均保留在工作区，未暂存、提交、推送或创建标签。group/ungroup/addto/front/back/read/save 继续明确提示未实现；不开始后续阶段。
+
+## 18. M4 最终验收（2026-10-28）
+
+用户审核 M4-A/M4-B 后授权第四次提交及推送。最终检查确认本轮全部变更属于 M4：四个独立编辑命令、数值解析、分发及会话尺寸入口、两份新增测试、旧测试的阶段预期调整、测试脚本和文档。没有发现意外文件或敏感凭据；构建产物、依赖、缓存、日志由 .gitignore 排除。本轮不增加新功能，无需生产代码修复或架构重构，上方开发历史保持原样。
+
+重新对照课程 4.3：IO 后 undo 与 redo 都应报 error: undo not allowed after io command。当前历史管理器统一抛出 undo not allowed after io command，由 CLI 添加 error:，包括 redo 也使用原文的同一提示，没有擅自改成 redo not allowed。
+
+混合历史检查确认 create/move/scale/set/delete 共用一套快照；删除子树一次恢复父级和兄弟顺序。失败 delete/canvas 保留文档及 redo，canvas 查询不改历史，成功修改尺寸清空旧历史并禁用撤销重做；失败编辑不能解禁，下一次成功编辑建立新历史，撤销不能越过尺寸修改边界。init 既有规则保持不变。现有回归测试已覆盖这些边界，无需为验收重复增加同义测试。
+
+最终 npm.cmd run typecheck、npm.cmd run build、npm.cmd test 均退出 0；124 项测试通过、0 失败、0 跳过。git diff --check 通过，仅有换行格式提示。未解决的既有规模限制仍为完整快照内存、历史无容量上限、深层递归及浮点精度；未发现阻止本阶段交付的功能问题。
+
+提交信息：feat: implement basic editing and canvas management。提交哈希及推送结果在生成后报告，不在提交内容中预写尚未发生的成功结果。本轮不创建 final 标签，不开始 M5。

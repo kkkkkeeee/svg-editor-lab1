@@ -321,7 +321,7 @@ test("REPL: 真实进程多行创建、查询、撤销重做及错误恢复", ()
   assert.equal(result.status, 0, result.stderr);
   for (const text of ["canvas 800x600 created", "g#scene created", "rect#r1 created in g#scene",
     "parent=g#scene", 'text="你好 World"', "undone:", "redone:",
-    "error: unknown shape type: box (is the plugin loaded?)", "error: command not implemented yet: move"]) {
+    "error: unknown shape type: box (is the plugin loaded?)", "rect#r1 moved by (1,2)"]) {
     assert.ok(result.stdout.includes(text), result.stdout);
   }
 });

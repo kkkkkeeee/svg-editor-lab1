@@ -20,6 +20,16 @@ export class EditorSession {
     return this.requireDocument().describe();
   }
 
+  public resizeCanvas(width: number, height: number): DocumentDescription {
+    const candidate = this.requireDocument().clone();
+    candidate.resize(width, height);
+    const description = candidate.describe();
+    // 验证及描述生成全部成功后才发布文档、清空历史。
+    this.#document = candidate;
+    this.#history.resetAfterIo();
+    return description;
+  }
+
   public snapshot(): SvgDocument { return this.requireDocument().clone(); }
 
   public execute(command: EditCommand): string {

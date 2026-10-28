@@ -75,7 +75,7 @@ test("dispatcher: 无文档、未知命令与尚未实现区分", () => {
   assert.throws(() => dispatcher.dispatch({ name: "read", args: ["a.svg"] }), /not implemented/);
   assert.equal(session.hasDocument, false);
   session.init();
-  assert.throws(() => dispatcher.dispatch({ name: "move", args: ["g1", "1", "2"] }), /not implemented/);
+  assert.throws(() => dispatcher.dispatch({ name: "move", args: ["g1", "1", "2"] }), /no such shape: g1/);
   assert.throws(() => dispatcher.dispatch({ name: "save", args: [] }), /not implemented/);
   assert.throws(() => dispatcher.dispatch({ name: "help", args: ["extra"] }), /usage: help/);
   assert.deepEqual(session.describe().children, []);
@@ -85,10 +85,10 @@ test("help: 无文档可用，全部 19 个命令均标注实现状态", () => {
   const result = new CommandDispatcher(new EditorSession()).dispatch({ name: "help", args: [] });
   assert.match(result, /\[已实现\] help/);
   assert.match(result, /\[已实现\] init \[w\] \[h\]/);
-  const pending = ["read", "save", "canvas", "delete", "move", "scale", "set",
+  const pending = ["read", "save",
     "group", "ungroup", "addto", "front", "back"];
   for (const name of pending) assert.ok(result.includes("[暂未实现] " + name));
-  for (const name of ["create", "tree", "show", "undo", "redo"]) assert.ok(result.includes("[已实现] " + name));
+  for (const name of ["create", "tree", "show", "undo", "redo", "move", "scale", "set", "delete", "canvas"]) assert.ok(result.includes("[已实现] " + name));
 });
 
 test("REPL: 管道一次输入多行、错误后继续、末行无换行的 EOF", () => {

@@ -1,5 +1,10 @@
 import { EditorSession } from "./EditorSession.js";
 import { CreateCommand } from "./commands/CreateCommand.js";
+import { MoveCommand } from "./commands/MoveCommand.js";
+import { ScaleCommand } from "./commands/ScaleCommand.js";
+import { SetCommand } from "./commands/SetCommand.js";
+import { DeleteCommand } from "./commands/DeleteCommand.js";
+import { NumericArgument } from "./NumericArgument.js";
 
 export interface CommandRequest {
   readonly name: string;
@@ -14,12 +19,12 @@ export class CommandDispatcher {
     { name: "init", syntax: "init [w] [h]", min: 0, max: 2, implemented: true, needsDocument: false },
     { name: "read", syntax: "read <file.svg>", min: 1, max: 1, implemented: false, needsDocument: false },
     { name: "save", syntax: "save [file.svg]", min: 0, max: 1, implemented: false, needsDocument: true },
-    { name: "canvas", syntax: "canvas [w] [h]", min: 0, max: 2, implemented: false, needsDocument: true },
+    { name: "canvas", syntax: "canvas [w h]", min: 0, max: 2, implemented: true, needsDocument: true },
     { name: "create", syntax: "create <type> <id> [params…] [in <containerId>]", min: 2, max: Infinity, implemented: true, needsDocument: true },
-    { name: "delete", syntax: "delete <id>", min: 1, max: 1, implemented: false, needsDocument: true },
-    { name: "move", syntax: "move <id> <dx> <dy>", min: 3, max: 3, implemented: false, needsDocument: true },
-    { name: "scale", syntax: "scale <id> <factor>", min: 2, max: 2, implemented: false, needsDocument: true },
-    { name: "set", syntax: "set <id> <attr> <value>", min: 3, max: 3, implemented: false, needsDocument: true },
+    { name: "delete", syntax: "delete <id>", min: 1, max: 1, implemented: true, needsDocument: true },
+    { name: "move", syntax: "move <id> <dx> <dy>", min: 3, max: 3, implemented: true, needsDocument: true },
+    { name: "scale", syntax: "scale <id> <factor>", min: 2, max: 2, implemented: true, needsDocument: true },
+    { name: "set", syntax: "set <id> <attr> <value>", min: 3, max: 3, implemented: true, needsDocument: true },
     { name: "group", syntax: "group <newGid> <id1> <id2>…", min: 2, max: Infinity, implemented: false, needsDocument: true },
     { name: "ungroup", syntax: "ungroup <gid>", min: 1, max: 1, implemented: false, needsDocument: true },
     { name: "addto", syntax: "addto <gid> <id>", min: 2, max: 2, implemented: false, needsDocument: true },
@@ -57,6 +62,24 @@ export class CommandDispatcher {
       }
       case "create":
         return this.create(request);
+      case "delete":
+        return this.session.execute(new DeleteCommand(request.args[0]));
+      case "canvas": {
+        if (request.args.length === 1) throw new Error(`invalid arguments; usage: ${entry.syntax}`);
+        if (request.args.length === 0) {
+          const document = this.session.describe();
+          return `canvas ${document.width}x${document.height}`;
+        }
+        const document = this.session.resizeCanvas(this.dimension(request.args[0]), this.dimension(request.args[1]));
+        return `canvas ${document.width}x${document.height} resized`;
+      }
+      case "move":
+        return this.session.execute(new MoveCommand(request.args[0],
+          NumericArgument.parse(request.args[1], "dx"), NumericArgument.parse(request.args[2], "dy")));
+      case "scale":
+        return this.session.execute(new ScaleCommand(request.args[0], NumericArgument.parse(request.args[1], "scale factor")));
+      case "set":
+        return this.session.execute(new SetCommand(request.args[0], request.args[1], request.args[2]));
       case "tree":
         return this.session.tree(request.args[0]);
       case "show":

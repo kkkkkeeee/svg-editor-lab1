@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="260" viewBox="0 0 640 260">
+  <g id="scene">
+    <rect id="start" fill="#4a90d9" height="90" width="190" x="40" y="70"/>
+    <text id="label" fill="white" x="55" y="120">开始 &amp; &lt;保存&gt;</text>
+    <line id="edge" stroke="#34495e" stroke-width="3" x1="230" x2="400" y1="115" y2="115"/>
+    <g id="nested">
+      <circle id="end" cx="455" cy="115" fill="#f5a623" r="55"/>
+      <text id="end-label" x="435" y="120">完成</text>
+    </g>
+  </g>
+  <ellipse id="badge" cx="560" cy="205" fill="#75c9a3" rx="40" ry="15"/>
+</svg>

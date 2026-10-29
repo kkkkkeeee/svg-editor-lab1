@@ -164,13 +164,13 @@ test("M4-B 真实 REPL 删除/恢复/画布边界与错误后继续", () => {
     cwd: fileURLToPath(new URL("../../", import.meta.url)), encoding: "utf8", timeout: 10_000,
     input: ["init", "canvas", "create g scene", "create rect r 1 2 3 4 in scene", "delete scene",
       "undo", "show r", "redo", "undo", "canvas 400 300", "undo", "delete missing", "redo",
-      "canvas 100", "canvas", "delete r", "undo", "show r", "help", "save demo.svg"].join("\n"),
+      "canvas 100", "canvas", "delete r", "undo", "show r", "help", "save"].join("\n"),
   });
   assert.ifError(result.error); assert.equal(result.status, 0, result.stderr);
   for (const text of ["canvas 800x600", "g#scene deleted", "undone: g#scene deleted", "redone: g#scene deleted",
     "rect#r  parent=g#scene", "canvas 400x300 resized", "error: undo not allowed after io command",
     "error: no such shape: missing", "error: invalid arguments; usage: canvas [w h]", "rect#r deleted",
-    "undone: rect#r deleted", "[已实现] delete", "[已实现] canvas [w h]", "error: command not implemented yet: save"]) {
+    "undone: rect#r deleted", "[已实现] delete", "[已实现] canvas [w h]", "error: no save path. specify a file path"]) {
     assert.ok(result.stdout.includes(text), result.stdout);
   }
   assert.equal(result.stdout.split("error: undo not allowed after io command").length - 1, 2);

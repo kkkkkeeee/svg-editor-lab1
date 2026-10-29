@@ -76,7 +76,7 @@ test("dispatcher: 无文档、未知命令与尚未实现区分", () => {
   assert.equal(session.hasDocument, false);
   session.init();
   assert.throws(() => dispatcher.dispatch({ name: "move", args: ["g1", "1", "2"] }), /no such shape: g1/);
-  assert.throws(() => dispatcher.dispatch({ name: "save", args: [] }), /not implemented/);
+  assert.throws(() => dispatcher.dispatch({ name: "save", args: [] }), /no save path. specify a file path/);
   assert.throws(() => dispatcher.dispatch({ name: "help", args: ["extra"] }), /usage: help/);
   assert.deepEqual(session.describe().children, []);
 });
@@ -85,8 +85,9 @@ test("help: 无文档可用，全部 19 个命令均标注实现状态", () => {
   const result = new CommandDispatcher(new EditorSession()).dispatch({ name: "help", args: [] });
   assert.match(result, /\[已实现\] help/);
   assert.match(result, /\[已实现\] init \[w\] \[h\]/);
-  const pending = ["read", "save"];
+  const pending = ["read"];
   for (const name of pending) assert.ok(result.includes("[暂未实现] " + name));
+  assert.ok(result.includes("[已实现] save [file.svg]"));
   for (const name of ["create", "tree", "show", "undo", "redo", "move", "scale", "set", "delete", "canvas", "addto", "front", "back", "group", "ungroup"]) assert.ok(result.includes("[已实现] " + name));
 });
 

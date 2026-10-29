@@ -4,7 +4,7 @@
 
 使用 TypeScript 面向对象设计实现命令行 SVG 编辑器，重点是 Command、Composite、模块依赖和真实的 AI 协作过程。
 
-**M1～M4 已提交并推送，M4 提交为 22d4fa6。M5-A/M5-B 已通过设计审核及最终代码验收；本次交付包含全部 M5 功能。** 当前 SVG REPL 支持 help、init、canvas、create、move、scale、set、delete、group、ungroup、addto、front、back、tree、show、undo、redo。文件读写与插件尚未实现。当前完整测试结果为 151 项通过；历史阶段测试结果保留不变，详见末尾记录。
+**M1～M5 已提交并推送，最新提交为 cd5f287。M6-A/M6-B 已实现并通过最终代码验收、自动验证及用户人工 SVG 预览；本次交付进行第六次提交与推送，结果以 Git 记录为准。** 当前 SVG REPL 支持 help、init、canvas、save、create、move、scale、set、delete、group、ungroup、addto、front、back、tree、show、undo、redo。read 与插件尚未实现。当前完整测试结果为 177 项通过；历史阶段测试结果保留不变，详见末尾记录。
 
 需求依据：课程 `phase_cli_1.md`，本机原件位于 `D:/learning/读研/1.1/高级软件开发/phase_cli_1.md`。本说明不替代原始要求。
 
@@ -22,7 +22,7 @@
 
 不实现 box、ShapeProvider 插件、动态加载、GUI 或路径寻址；create box 按未知类型报错。
 
-交付需 Git 分步提交并推送远程仓库，最终提交在截止时间前打 final 标签。本文件须包括架构、过程、一致性自查及质量保证。远程仓库为 https://github.com/kkkkkeeee/svg-editor-lab1；截止时间待用户提供。本轮不提交、推送或创建标签。
+交付需 Git 分步提交并推送远程仓库，最终提交在截止时间前打 final 标签。本文件须包括架构、过程、一致性自查及质量保证。远程仓库为 https://github.com/kkkkkeeee/svg-editor-lab1；截止时间待用户提供。M6 最终验收轮已获授权提交并推送；不创建 final 标签。
 
 ## 2. 环境、脚本与目录
 
@@ -46,20 +46,21 @@ assignment1/
 ├── src/
 │   ├── main.ts              # 组装会话、分发器、解析器、显示器与 REPL
 │   ├── cli/                 # CliApplication、CommandParser、ConsoleRenderer
-│   ├── application/         # EditorSession、CommandDispatcher、CommandHistory、DocumentFormatter、NumericArgument
+│   ├── application/         # EditorSession、CommandDispatcher、CommandHistory、DocumentFormatter、NumericArgument、DocumentStore 接口
 │   │   └── commands/        # EditCommand 接口、CreateCommand、MoveCommand、ScaleCommand、SetCommand、DeleteCommand、AddToCommand、FrontCommand、BackCommand、GroupCommand、UngroupCommand
 │   ├── domain/
 │   │   ├── Shape.ts
 │   │   ├── ShapeFactory.ts
 │   │   ├── SvgDocument.ts
 │   │   └── shapes/          # Rect.ts、Circle.ts、Ellipse.ts、Line.ts、Text.ts、Group.ts
-│   └── infrastructure/.gitkeep
+│   └── infrastructure/      # SvgCodec.ts、SvgFileStore.ts：序列化及文件保存
 ├── tests/
 │   ├── EnvironmentCheck.test.ts  # 已更新为 CLI 启动/EOF 测试
 │   ├── cli/Cli.test.ts
-│   ├── application/         # CreateHistory.test.ts、BasicEdit.test.ts、DeleteCanvas.test.ts、HierarchyOrder.test.ts、GroupUngroup.test.ts
-│   └── domain/             # Shapes.test.ts、Tree.test.ts
-├── examples/preview.svg
+│   ├── application/         # CreateHistory.test.ts、BasicEdit.test.ts、DeleteCanvas.test.ts、HierarchyOrder.test.ts、GroupUngroup.test.ts、SaveIo.test.ts（MemoryDocumentStore 为测试替代存储）
+│   ├── domain/             # Shapes.test.ts、Tree.test.ts
+│   └── infrastructure/     # SvgCodec.test.ts
+├── examples/               # preview.svg、codec-preview.svg、generate-codec-preview.mjs
 ├── doc/README.md
 ├── package.json
 ├── package-lock.json
@@ -71,7 +72,7 @@ assignment1/
 
 .gitkeep 使 Git 保留空目录，不创建空业务类；添加实际文件后可移除。node_modules、dist、.npm-cache 和日志已忽略。项目内 npm 缓存沿用此前解决写权限问题的配置。
 
-保留原 tsconfig.json 的严格检查、NodeNext、sourceMap 和 dist/main.js 输出布局。tsconfig.test.json 继承它，将 rootDir 放宽到项目根并启用 noEmit，覆盖 src 和 tests。测试脚本显式指定入口、CLI、创建历史、基础编辑、删除画布、层级排序、分组解散、叶子及树模型九个测试文件，避免 Windows shell 通配符差异；新增测试文件时同步调整入口。
+保留原 tsconfig.json 的严格检查、NodeNext、sourceMap 和 dist/main.js 输出布局。tsconfig.test.json 继承它，将 rootDir 放宽到项目根并启用 noEmit，覆盖 src 和 tests。测试脚本显式指定入口、CLI、创建历史、基础编辑、删除画布、层级排序、分组解散、叶子及树模型、SVG 序列化、文件保存十一个测试文件，避免 Windows shell 通配符差异；新增测试文件时同步调整入口。
 
 ## 3. 模块划分与依赖规则
 
@@ -163,7 +164,7 @@ Shape 提供 move、scale、set 等共同接口；Rect、Circle 等是叶子，G
 | 跨父容器 group | 同父级放在最早被选节点位置；跨父级新组放根级末尾，孩子按操作前文档遍历顺序排列。M5-B 已采纳为项目设计约定（非课程逐字规定），详见第 20 节 |
 | 普通 g 的 set | 样式写到 g，让未显式设置属性的孩子继承，不覆盖孩子显式样式 |
 | front/back | front 是视觉最上层，即同级 SVG 列表末尾；back 是开头 |
-| save 路径 | init 后没有默认路径时要求文件名；显式 save 成功后建议更新默认路径，原文仅明确 read 路径 |
+| save 路径 | M6-B 已采用：init 清除路径；成功显式 save 更新默认路径，原文仅明确 read 路径，详见第 23 节 |
 | help | 建议无文档也可使用，与启动提示一致；原文“其他命令”表述较宽 |
 | 数值/语法 | 建议拒绝 NaN/Infinity、允许负坐标；零尺寸、init 单参数、引号转义、空历史错误、无效果编辑是否入栈需提前定表 |
 | 自动 id | 先收集全部显式 id，再分配未占用的标签名+序号；显式重复 id 拒绝读入 |
@@ -174,7 +175,7 @@ Shape 提供 move、scale、set 等共同接口；Rect、Circle 等是叶子，G
 
 完整任意 SVG 兼容性不是当前承诺。背景例子含 transform、font-size、text-anchor，但命令白名单和导入细则未完整定义处理方式。transform、非默认 viewBox、单位、style/CSS、path/defs/use 及未知属性的支持范围需在 M7 前确认。不能静默丢弃影响画面的信息；决定不支持时应明确报错并保持原文档。data-kind="box" 若纳入导入测试，遵循原文降级为普通 g 的语义，不创建 box 类型。
 
-本轮不实现解析、不选择或安装 XML 库。计划先构建并验证临时文档，再替换当前文档；解析失败不污染原状态。文本/属性转义、子节点顺序及属性缺省是后续往返测试重点。
+M1 规划时不实现解析、不选择或安装 XML 库；M6-A 新增的 XML 库仅用于测试（见第 22 节），SVG 导入仍未实现。计划先构建并验证临时文档，再替换当前文档；解析失败不污染原状态。文本/属性转义、子节点顺序及属性缺省是后续往返测试重点。
 
 ## 7. 变化点与取舍
 
@@ -749,3 +750,124 @@ M1-M5A-AUDIT.md 与对应黑盒脚本保持历史原样；旧脚本含“group/u
 提交范围限定为 M5 的五个命令、SvgDocument、Dispatcher、两份新测试、help 测试、package.json 和本 README，共 12 个文件。已检查暂存前状态、文件内容及常见凭据模式，未发现凭据；node_modules/dist/.npm-cache/日志已被忽略。独立审计报告、其黑盒脚本和 svg-editor-audit.zip 不纳入本次提交，也不删除或修改。
 
 按用户授权安排第五次提交 `feat: implement hierarchy and grouping commands` 并推送现有 origin/master；具体提交哈希及实时远程核对结果由本轮执行报告提供，避免在提交前编造推送结果。既有非阻塞审计风险仍保留，没有发现阻塞下一阶段的问题；本轮不开始 M6、不创建 final 标签。
+
+## 22. M6-A：SVG/XML 序列化（2026-10-29）
+
+### 职责、接口与依赖
+
+新增 infrastructure/SvgCodec.ts，公开接口 `serialize(document: SvgDocument): string`。只读取 document.describe()，不修改领域对象、不写文件、不改变会话和历史。domain/application/cli 没有反向依赖；Command、CommandHistory 和 Dispatcher 没有修改。四层方案无需调整，不新增可修改图形模型或插件框架。
+
+现有 ShapeDescription.type 已等于 rect/circle/ellipse/line/text/g 标签名，attributes 已使用 width/height、cx/cy 等 SVG 属性名，因此直接输出描述，不重新按类型 switch 分派。text 字段写成元素内容；children 递归输出；组不传播或补写样式。元素名及属性名白名单仅做输出边界防护，不再次实现几何业务规则。
+
+根带 XML 1.0 声明、SVG namespace、当前 width/height 和相同尺寸的 viewBox。固定 LF、两空格缩进、末尾换行、id 优先、其余属性按 ASCII 名称排序；相同内容即使样式设置先后不同，输出仍相同。数字使用 JavaScript 无截断的字符串表示，允许有限浮点及指数形式。返回值是 JavaScript 字符串；本阶段示例明确按 UTF-8 编码落盘，未来文件层也必须使用 UTF-8。
+
+### 转义和字符策略
+
+依据 [W3C XML 1.0 字符规则](https://www.w3.org/TR/xml/#charsets)：允许 TAB/LF/CR、U+0020～D7FF、E000～FFFD、10000～10FFFF；拒绝 NUL、其他非法 C0 控制字符、FFFE/FFFF 和孤立 UTF-16 代理项，报 `invalid XML 1.0 character: U+XXXX`。中文与合法代理对（如 emoji）保留。错误只报告码点，不把危险字符回显到错误中；输出失败不修改原文档。
+
+私有 escape 方法同时安全服务属性与文本：先校验码点，再转义 &、<、>、双引号、单引号。转义 > 也消除了文本中的 ]]> 问题。TAB/LF/CR 输出为数字字符引用，防止 XML 属性空白或换行归一化改变原始值。文本内容与开闭标签同一行，不注入缩进空白。空 text 使用显式开闭标签；空 g/叶子使用自闭合标签。仅输出当前内置描述的显式属性，不生成默认 fill/stroke，不输出 text/type/children 等内部字段。
+
+此边界保证 XML 字符与结构安全，不验证任意 fill/stroke 的完整 CSS paint 语法，也不承诺未来任意自定义 Shape 描述兼容；生产输入范围仍为当前六种内置模型。
+
+### 测试与实际问题
+
+新增 tests/infrastructure/SvgCodec.test.ts，17 项测试；原有 151 项保留，总计 **168 通过，0 失败、0 跳过**。覆盖空文档、六种类型及全部公共样式、画布/几何浮点、多层嵌套、front/back 实际顺序、中文/空格/空文本、属性与元素注入、实体字面量、]]>、合法空白保留、非法字符拒绝、确定性、文档不变及 redo 不受影响。
+
+加入精确版本 `@xmldom/xmldom@0.9.12` 为唯一新增 devDependency（[项目来源](https://github.com/xmldom/xmldom)），只用于测试，不进入生产序列化路径；package-lock 同步锁定。解析器对所有 warning/error/fatalError 都停止，检查解析后的 namespace、标签、属性、孩子顺序和文本原值；另用错误嵌套和重复属性验证解析器确实拒绝坏 XML。不是仅靠字符串包含关系判断 XML 合法。
+
+首轮测试为 167 通过、1 失败：测试试图创建含 U+000B 的 id，但 Shape 已在序列化前以“id 不得含空白”拒绝。修正测试夹具，分别断言领域层提前拒绝和 codec 输出边界拒绝，其余非法字符仍进入 codec 校验。没有放松现有断言，也没有修改领域规则。npm 最初在沙箱内 DNS 失败，授权联网后完成安装，未增加生产依赖。
+
+本轮 npm.cmd run typecheck、npm.cmd run build、npm.cmd test、git diff --check 均通过。运行测试与 XML DOM 验证不等于完成视觉验收。
+
+### 示例文件与预览状态
+
+新增 examples/generate-codec-preview.mjs，仅作为验证辅助。先 build，再执行 `node examples/generate-codec-preview.mjs`，调用实际编译后的 SvgCodec，生成 examples/codec-preview.svg。包含六种元素、两层 Group、显式颜色、连线、中文和 `开始 & <检查> "XML"`。这次辅助写入不是 save 功能，没有默认路径或 IO 历史行为。
+
+已生成并检查 UTF-8 示例内容。最初尝试在浏览器工具打开本地 file:// 文件时被安全策略禁止；没有切换其他浏览器通道规避。2026-10-29 用户在 VS Code 中打开 examples/codec-preview.svg，并使用 SVG Preview 人工检查，确认蓝色矩形、橙色圆形、连接线、绿色椭圆及中文文本均正常显示，`开始 & <检查> "XML"` 的特殊字符正确显示，无渲染异常。**视觉预览验证通过，证据来源为用户明确反馈，非 AI 自行观察截图或浏览器自动验收。** 这补充了自动 XML 解析验证，仍不代表 save/read 已实现。
+
+### 后续接口与边界
+
+M6-B 可在基础设施文件适配器中调用 serialize 得到完整字符串后再写入；路径管理、写入失败原子性和 IO 后历史禁用仍由下一阶段设计实现，本轮没有创建 DocumentStore 或 save 命令。M7 将来负责解析与重建领域对象；本轮的测试 DOM 解析不是应用的 SVG 导入。未实现 read/save、反序列化、插件或 GUI。
+
+独立审计报告、旧黑盒脚本和 svg-editor-audit.zip 保持原样；未执行 Git 暂存、commit、push 或标签操作。
+
+### M6-A 人工预览确认后的最终复验（2026-10-29）
+
+收到用户对 VS Code SVG Preview 的明确通过反馈后，再次执行 npm.cmd run typecheck、npm.cmd run build、npm.cmd test，均退出 0；168 项测试全部通过，0 失败、0 跳过。随后 git diff --check 通过。此次仅同步 README 的当前状态与预览证据来源，未修改生产代码或测试。M6-A 的代码、自动验证及人工预览证据齐备，等待审核；未开始 M6-B。
+
+## 23. M6-B：文件保存与历史集成（2026-10-29）
+
+### 接口、职责与默认路径
+
+课程第 3 节规定 `save [file.svg]` 无参数保存到读入路径，第 4.2 节规定 `cannot write file: <path>`，第 4.3 节规定成功 IO 后禁用 undo/redo。read 尚未实现，不假装存在读入路径。
+
+application/DocumentStore.ts 定义小接口 `save(document: SvgDocument, path: string): void`，正常返回表示保存完成，失败抛错。infrastructure/SvgFileStore 实现接口，复用 SvgCodec.serialize，再执行文件写入。EditorSession.save(path?) 提供用例和摘要；main.ts 注入 SvgFileStore。application 不导入 infrastructure/fs，domain 无 IO。沿用当前同步 REPL，以同步存储确保后续命令不会越过尚未结束的保存；大文件期间会阻塞输入，是当前课程规模的取舍。
+
+项目设计约定（原文未完整规定）：
+
+- init 成功清除默认路径，失败 init 不改变它；无默认路径的 save 报 `no save path. specify a file path`。
+- 成功显式 save 更新默认路径，后续无参数 save 使用它；canvas 与普通编辑保留路径。显式空路径拒绝，不当成无参数。
+- 路径按用户输入保存，相对路径相对于 CLI 进程工作目录；CLI 不提供切换目录命令。不自动补扩展名或创建缺失目录。
+- 成功摘要为 `saved to <path> (N elements)`，N 包含全部叶子与 Group，不包含 svg 根。
+- 未注入存储的会话仍可用于纯编辑测试；调用显式 save 时明确失败，不回退到隐式磁盘实现。
+
+EditorSession 在写入前准备文档独立副本、元素计数及摘要，传给存储；仅存储正常返回后更新默认路径并调用原有 resetAfterIo。存储即使保留或错误修改传入副本也不能影响会话当前树。save 不是 EditCommand，不进入可撤销编辑栈。
+
+### 写入安全及限制
+
+SvgFileStore 的步骤是：完成全部 XML 序列化 → 在目标同目录用随机 UUID 名称及 wx 独占创建临时文件 → UTF-8 写入并关闭 → rename 替换目标。只在成功创建后登记临时文件清理资格；不提前删除或截断旧目标。序列化失败不创建文件，写入/替换失败保留旧目标，finally 尽力关闭句柄并删除本次临时文件。错误统一为 cannot write file，内部 cause 保留诊断原因。
+
+选择同目录避免跨卷重命名；当前 Windows 环境已验证新建、重复覆盖及失败清理。其他系统的同目录 rename 依赖 Node/操作系统文件系统语义，未进行跨平台实测。目标被锁定、权限不允许、目标为目录时可失败，绝不降级为“删旧文件再写”。替换的是目录项：不保证保留原文件 inode、权限/ACL 或符号链接目标语义。无 fsync/目录同步，不承诺断电持久性；没有跨进程锁，并发保存可能后成功者覆盖先成功者。进程被终止或清理权限丢失可能遗留 `.svg-editor-*.tmp`，不会把异常清理成功伪装为保证。没有引入事务框架或自动重试覆盖。
+
+### 历史与失败验证
+
+成功保存清空旧 undo/redo 并禁用两者，统一报 `undo not allowed after io command`。失败编辑不能解禁；下一次成功编辑建立新的历史起点，其 undo 不可越过保存边界。无路径、参数错误、序列化失败、写入失败均不改变文档、默认路径、历史或禁用状态。
+
+新增 tests/application/SaveIo.test.ts 的 9 项综合测试及一类一文件的 MemoryDocumentStore 测试替代实现。覆盖显式/默认路径、init/canvas 边界、全部六种图形及多层顺序、中文和特殊字符的真实 UTF-8 XML 文件、重复覆盖、失败保留 redo/旧路径、保存后禁用及成功编辑解禁、无文档、空路径、参数数量、真实多行 CLI。
+
+失败覆盖包括：序列化前拒绝非法字符且旧目标字节不变；不存在目录；目标是目录导致 rename 失败并清理临时文件；模拟磁盘写到一半抛错；模拟目标锁定导致 rename 失败。后两者同时断言旧文件字节、整份文档及真实 redo 恢复。所有单元文件操作使用 mkdtemp 创建的系统临时目录，测试后清理，不覆盖 examples 正式示例。
+
+原 168 项测试全部保留，更新旧 help 和未实现 save 的阶段断言为实际新行为，并未放宽其他业务断言。首轮类型检查发现测试辅助函数误从重载 test 推断上下文类型，改用官方 TestContext。首轮全量为 173 通过、4 失败：一项旧 M4-B CLI 断言仍期望 save 未实现，另三项由沙箱对系统临时目录 rename 的 EPERM 导致。旧测试改为无默认路径错误断言，避免继续生成根目录 demo.svg；本轮旧测试已生成的 demo.svg 已清理。沙箱外授权复验 **177 项通过，0 失败、0 跳过**，未修改文件安全策略来绕过环境限制。
+
+### 编译后 CLI 和真实预览
+
+npm.cmd run typecheck、npm.cmd run build 均通过，npm.cmd test 在允许系统临时目录 rename 的环境通过；git diff --check 通过。额外直接启动 node dist/main.js 回放 16 条命令，创建全部六种图形和嵌套组，真实执行如下保存闭环：
+
+```text
+save examples/m6b-save-preview.svg
+saved to examples/m6b-save-preview.svg (8 elements)
+undo
+error: undo not allowed after io command
+move end 10 0
+circle#end moved by (10,0)
+undo
+undone: circle#end moved by (10,0)
+save
+saved to examples/m6b-save-preview.svg (8 elements)
+```
+
+文件确实存在，独立 DOMParser 解析通过：两个 g、圆心 cx 恢复到 455、文本为 `开始 & <保存>`，EOF 退出 0，stderr 为空。examples/m6b-save-preview.svg 是本轮 CLI save 产物，不是 M6-A 的辅助生成文件。
+
+2026-10-29 用户使用 VS Code SVG Preview 检查该 CLI 文件，并回复“正常”，确认蓝色矩形、橙色圆、绿色椭圆、连接线及中文特殊字符显示正常。视觉证据来自用户人工反馈，不冒称为 AI 直接观察；此前工具本地文件访问限制未被绕过。
+
+### M7 准备与边界
+
+M7 可扩展应用层 DocumentStore 契约，读入成功后再更新会话文档和读入路径，沿用相同默认路径状态及 resetAfterIo；失败保持旧会话。此处仅记录未来接入点，本轮未添加 read、XML 反序列化或默认读入路径伪实现。M6-A 文件继续保留未提交；独立审计报告/脚本及 ZIP 不变。未执行 Git 暂存、提交、推送或标签操作。
+
+
+## 24. M6 最终验收（2026-10-30）
+
+本次实际复核 SvgCodec、SvgFileStore、DocumentStore、EditorSession、CommandDispatcher、main.ts 和全部 M6 新增测试，并对照既有测试差异。未发现需要修复的实际缺陷，未修改生产代码或新增功能。原有测试没有删除、跳过或削弱；仅保留开发阶段对 help/save 已实现状态的必要断言更新。
+
+- npm.cmd run typecheck、npm.cmd run build：退出 0。
+- npm.cmd test：177 项通过，0 失败、0 跳过。系统临时目录写入/rename 测试在授权环境中完成。
+- 独立运行编译后入口，回放 33 条命令：六种图形、嵌套组、中文与特殊字符、显式/default save、保存后 undo 禁用、编辑解禁、目录目标写入失败、非法 XML 文本序列化失败、实际 redo 恢复、失败 init 保留路径及成功 init 清除路径均通过断言。
+- 真实落盘文件 examples/m6b-save-preview.svg 经严格 UTF-8 解码与 XML DOMParser 解析通过；SVG 命名空间、viewBox、8 个元素（不含根）、根层 scene/badge、scene 内 start/label/edge/nested 及 nested 内 end/end-label 顺序均正确。
+- 本次回放后的示例与回放前逐字节一致，因此保留 2026-10-29 用户对该文件的 VS Code SVG Preview 正常反馈作为视觉证据；本轮未冒称重新观察预览。
+- package.json 与 package-lock.json 根开发依赖一致；M6 文件敏感凭据模式检查未发现匹配。构建产物、依赖、缓存由 .gitignore 排除；独立审计报告、脚本和 ZIP 不纳入提交，保持原样。
+
+架构保持不变：application 依赖 DocumentStore 小接口，main 注入基础设施；文件系统仅由 SvgFileStore 访问，XML 仅由 SvgCodec 生成。默认路径和历史只在存储成功返回后更新；候选文档副本隔离外部存储对会话的修改。
+
+写入策略保证范围：先序列化、再同目录独占临时文件写入和关闭、最后 rename；本机已验证写入中断及 rename 失败时旧目标内容保持不变，不执行删旧文件回退。该证据不等于所有平台/文件系统均有相同原子性；未验证跨平台，不承诺断电持久性、并发保存互斥、原文件 ACL/inode/符号链接语义保持。异常退出或清理失败仍可能遗留临时文件，详见 M6-B 限制。
+
+未发现阻塞 M7 的问题。第六次提交信息为 `feat: implement SVG serialization and file saving`；提交前执行 git diff --check，并仅暂存 M6 源码、测试、配置、示例及本 README。提交和推送结果由实际 Git 输出确认。本轮不实现 read、不创建 final 标签。

@@ -23,7 +23,7 @@ export class CommandDispatcher {
     { name: "help", syntax: "help", min: 0, max: 0, implemented: true, needsDocument: false },
     { name: "init", syntax: "init [w] [h]", min: 0, max: 2, implemented: true, needsDocument: false },
     { name: "read", syntax: "read <file.svg>", min: 1, max: 1, implemented: false, needsDocument: false },
-    { name: "save", syntax: "save [file.svg]", min: 0, max: 1, implemented: false, needsDocument: true },
+    { name: "save", syntax: "save [file.svg]", min: 0, max: 1, implemented: true, needsDocument: true },
     { name: "canvas", syntax: "canvas [w h]", min: 0, max: 2, implemented: true, needsDocument: true },
     { name: "create", syntax: "create <type> <id> [params…] [in <containerId>]", min: 2, max: Infinity, implemented: true, needsDocument: true },
     { name: "delete", syntax: "delete <id>", min: 1, max: 1, implemented: true, needsDocument: true },
@@ -67,6 +67,8 @@ export class CommandDispatcher {
       }
       case "create":
         return this.create(request);
+      case "save":
+        return this.session.save(request.args[0]);
       case "delete":
         return this.session.execute(new DeleteCommand(request.args[0]));
       case "group":

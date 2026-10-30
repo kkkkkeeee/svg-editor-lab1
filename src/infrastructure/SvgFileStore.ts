@@ -1,13 +1,23 @@
 import fs from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
-import type { DocumentStore } from "../application/DocumentStore.js";
+import type { DocumentStore, DocumentReadResult } from "../application/DocumentStore.js";
 import type { SvgDocument } from "../domain/SvgDocument.js";
 import { SvgCodec } from "./SvgCodec.js";
 
 /** 同目录临时文件完整写入并关闭后再替换目标，不先删除旧文件。 */
 export class SvgFileStore implements DocumentStore {
   public constructor(private readonly codec = new SvgCodec()) {}
+
+  public read(path: string): DocumentReadResult {
+    try {
+      if (!path.trim()) throw new Error("empty path");
+      const xml = new TextDecoder("utf-8", { fatal: true }).decode(fs.readFileSync(path));
+      return this.codec.deserialize(xml);
+    } catch (cause) {
+      throw new Error(`cannot read file: ${path}`, { cause });
+    }
+  }
 
   public save(document: SvgDocument, path: string): void {
     let temporary: string | undefined;

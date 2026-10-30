@@ -38,6 +38,23 @@ export class EditorSession {
 
   public snapshot(): SvgDocument { return this.requireDocument().clone(); }
 
+  public read(path: string): string {
+    try {
+      if (!path.trim() || !this.store) throw new Error("document store or path unavailable");
+      const loaded = this.store.read(path);
+      const candidate = loaded.document.clone();
+      const count = this.countElements(candidate.describe().children);
+      const message = [...loaded.warnings, `read ${path} (${count} elements)`].join("\n");
+      // 克隆、计数和所有输出准备完成后才发布，失败不会提前打印补 ID 警告。
+      this.#document = candidate;
+      this.#defaultPath = path;
+      this.#history.resetAfterIo();
+      return message;
+    } catch (cause) {
+      throw new Error(`cannot read file: ${path}`, { cause });
+    }
+  }
+
   public save(path?: string): string {
     const document = this.requireDocument();
     const target = path ?? this.#defaultPath;

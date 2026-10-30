@@ -1,10 +1,16 @@
-import type { DocumentStore } from "../../src/application/DocumentStore.js";
+import type { DocumentStore, DocumentReadResult } from "../../src/application/DocumentStore.js";
 import type { SvgDocument } from "../../src/domain/SvgDocument.js";
 
 /** 只用于应用层隔离测试，无 fs 或 infrastructure 依赖。 */
 export class MemoryDocumentStore implements DocumentStore {
   public readonly documents = new Map<string, SvgDocument>();
   public fail = false;
+
+  public read(path: string): DocumentReadResult {
+    const document = this.documents.get(path);
+    if (this.fail || !document) throw new Error("simulated read failure");
+    return { document: document.clone(), warnings: [] };
+  }
 
   public save(document: SvgDocument, path: string): void {
     if (this.fail) {

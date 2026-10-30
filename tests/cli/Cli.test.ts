@@ -61,7 +61,7 @@ test("init: 参数错误或非法尺寸不替换已有文档", () => {
   }
 });
 
-test("dispatcher: 无文档、未知命令与尚未实现区分", () => {
+test("dispatcher: 无文档、未知命令与读取失败区分", () => {
   const session = new EditorSession();
   const dispatcher = new CommandDispatcher(session);
   const commands = ["save", "canvas", "create", "delete", "move", "scale", "set",
@@ -72,7 +72,7 @@ test("dispatcher: 无文档、未知命令与尚未实现区分", () => {
     });
   }
   assert.throws(() => dispatcher.dispatch({ name: "wat", args: [] }), /unknown command: wat/);
-  assert.throws(() => dispatcher.dispatch({ name: "read", args: ["a.svg"] }), /not implemented/);
+  assert.throws(() => dispatcher.dispatch({ name: "read", args: ["a.svg"] }), { message: "cannot read file: a.svg" });
   assert.equal(session.hasDocument, false);
   session.init();
   assert.throws(() => dispatcher.dispatch({ name: "move", args: ["g1", "1", "2"] }), /no such shape: g1/);
@@ -85,8 +85,8 @@ test("help: 无文档可用，全部 19 个命令均标注实现状态", () => {
   const result = new CommandDispatcher(new EditorSession()).dispatch({ name: "help", args: [] });
   assert.match(result, /\[已实现\] help/);
   assert.match(result, /\[已实现\] init \[w\] \[h\]/);
-  const pending = ["read"];
-  for (const name of pending) assert.ok(result.includes("[暂未实现] " + name));
+  assert.ok(result.includes("[已实现] read <file.svg>"));
+  assert.ok(!result.includes("[暂未实现]"));
   assert.ok(result.includes("[已实现] save [file.svg]"));
   for (const name of ["create", "tree", "show", "undo", "redo", "move", "scale", "set", "delete", "canvas", "addto", "front", "back", "group", "ungroup"]) assert.ok(result.includes("[已实现] " + name));
 });

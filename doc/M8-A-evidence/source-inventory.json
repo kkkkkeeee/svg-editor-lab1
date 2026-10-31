@@ -1,0 +1,336 @@
+[
+  {
+    "file": "src/application/CommandDispatcher.ts",
+    "classes": [
+      "CommandDispatcher"
+    ],
+    "imports": [
+      "./EditorSession.js",
+      "./commands/CreateCommand.js",
+      "./commands/MoveCommand.js",
+      "./commands/ScaleCommand.js",
+      "./commands/SetCommand.js",
+      "./commands/DeleteCommand.js",
+      "./commands/AddToCommand.js",
+      "./commands/FrontCommand.js",
+      "./commands/BackCommand.js",
+      "./commands/GroupCommand.js",
+      "./commands/UngroupCommand.js",
+      "./NumericArgument.js"
+    ]
+  },
+  {
+    "file": "src/application/CommandHistory.ts",
+    "classes": [
+      "CommandHistory"
+    ],
+    "imports": [
+      "../domain/SvgDocument.js",
+      "./commands/EditCommand.js"
+    ]
+  },
+  {
+    "file": "src/application/commands/AddToCommand.ts",
+    "classes": [
+      "AddToCommand"
+    ],
+    "imports": [
+      "../../domain/SvgDocument.js",
+      "./EditCommand.js"
+    ]
+  },
+  {
+    "file": "src/application/commands/BackCommand.ts",
+    "classes": [
+      "BackCommand"
+    ],
+    "imports": [
+      "../../domain/SvgDocument.js",
+      "./EditCommand.js"
+    ]
+  },
+  {
+    "file": "src/application/commands/CreateCommand.ts",
+    "classes": [
+      "CreateCommand"
+    ],
+    "imports": [
+      "../../domain/ShapeFactory.js",
+      "../../domain/SvgDocument.js",
+      "./EditCommand.js"
+    ]
+  },
+  {
+    "file": "src/application/commands/DeleteCommand.ts",
+    "classes": [
+      "DeleteCommand"
+    ],
+    "imports": [
+      "../../domain/SvgDocument.js",
+      "./EditCommand.js"
+    ]
+  },
+  {
+    "file": "src/application/commands/EditCommand.ts",
+    "classes": [],
+    "imports": [
+      "../../domain/SvgDocument.js"
+    ]
+  },
+  {
+    "file": "src/application/commands/FrontCommand.ts",
+    "classes": [
+      "FrontCommand"
+    ],
+    "imports": [
+      "../../domain/SvgDocument.js",
+      "./EditCommand.js"
+    ]
+  },
+  {
+    "file": "src/application/commands/GroupCommand.ts",
+    "classes": [
+      "GroupCommand"
+    ],
+    "imports": [
+      "../../domain/SvgDocument.js",
+      "./EditCommand.js"
+    ]
+  },
+  {
+    "file": "src/application/commands/MoveCommand.ts",
+    "classes": [
+      "MoveCommand"
+    ],
+    "imports": [
+      "../../domain/SvgDocument.js",
+      "./EditCommand.js"
+    ]
+  },
+  {
+    "file": "src/application/commands/ScaleCommand.ts",
+    "classes": [
+      "ScaleCommand"
+    ],
+    "imports": [
+      "../../domain/SvgDocument.js",
+      "./EditCommand.js"
+    ]
+  },
+  {
+    "file": "src/application/commands/SetCommand.ts",
+    "classes": [
+      "SetCommand"
+    ],
+    "imports": [
+      "../../domain/SvgDocument.js",
+      "../NumericArgument.js",
+      "./EditCommand.js"
+    ]
+  },
+  {
+    "file": "src/application/commands/UngroupCommand.ts",
+    "classes": [
+      "UngroupCommand"
+    ],
+    "imports": [
+      "../../domain/SvgDocument.js",
+      "./EditCommand.js"
+    ]
+  },
+  {
+    "file": "src/application/DocumentFormatter.ts",
+    "classes": [
+      "DocumentFormatter"
+    ],
+    "imports": [
+      "../domain/SvgDocument.js",
+      "../domain/Shape.js"
+    ]
+  },
+  {
+    "file": "src/application/DocumentStore.ts",
+    "classes": [],
+    "imports": [
+      "../domain/SvgDocument.js"
+    ]
+  },
+  {
+    "file": "src/application/EditorSession.ts",
+    "classes": [
+      "EditorSession"
+    ],
+    "imports": [
+      "../domain/SvgDocument.js",
+      "./CommandHistory.js",
+      "./DocumentFormatter.js",
+      "./commands/EditCommand.js",
+      "./DocumentStore.js",
+      "../domain/Shape.js"
+    ]
+  },
+  {
+    "file": "src/application/NumericArgument.ts",
+    "classes": [
+      "NumericArgument"
+    ],
+    "imports": []
+  },
+  {
+    "file": "src/cli/CliApplication.ts",
+    "classes": [
+      "CliApplication"
+    ],
+    "imports": [
+      "node:readline",
+      "node:stream",
+      "node:tty",
+      "../application/CommandDispatcher.js",
+      "./CommandParser.js",
+      "./ConsoleRenderer.js"
+    ]
+  },
+  {
+    "file": "src/cli/CommandParser.ts",
+    "classes": [
+      "CommandParser"
+    ],
+    "imports": [
+      "../application/CommandDispatcher.js"
+    ]
+  },
+  {
+    "file": "src/cli/ConsoleRenderer.ts",
+    "classes": [
+      "ConsoleRenderer"
+    ],
+    "imports": [
+      "node:stream"
+    ]
+  },
+  {
+    "file": "src/domain/Shape.ts",
+    "classes": [
+      "Shape"
+    ],
+    "imports": []
+  },
+  {
+    "file": "src/domain/ShapeFactory.ts",
+    "classes": [
+      "ShapeFactory"
+    ],
+    "imports": [
+      "./Shape.js",
+      "./shapes/Rect.js",
+      "./shapes/Circle.js",
+      "./shapes/Ellipse.js",
+      "./shapes/Line.js",
+      "./shapes/Text.js",
+      "./shapes/Group.js"
+    ]
+  },
+  {
+    "file": "src/domain/shapes/Circle.ts",
+    "classes": [
+      "Circle"
+    ],
+    "imports": [
+      "../Shape.js"
+    ]
+  },
+  {
+    "file": "src/domain/shapes/Ellipse.ts",
+    "classes": [
+      "Ellipse"
+    ],
+    "imports": [
+      "../Shape.js"
+    ]
+  },
+  {
+    "file": "src/domain/shapes/Group.ts",
+    "classes": [
+      "Group"
+    ],
+    "imports": [
+      "../Shape.js"
+    ]
+  },
+  {
+    "file": "src/domain/shapes/Line.ts",
+    "classes": [
+      "Line"
+    ],
+    "imports": [
+      "../Shape.js"
+    ]
+  },
+  {
+    "file": "src/domain/shapes/Rect.ts",
+    "classes": [
+      "Rect"
+    ],
+    "imports": [
+      "../Shape.js"
+    ]
+  },
+  {
+    "file": "src/domain/shapes/Text.ts",
+    "classes": [
+      "Text"
+    ],
+    "imports": [
+      "../Shape.js"
+    ]
+  },
+  {
+    "file": "src/domain/SvgDocument.ts",
+    "classes": [
+      "SvgDocument"
+    ],
+    "imports": [
+      "./Shape.js",
+      "./shapes/Group.js"
+    ]
+  },
+  {
+    "file": "src/infrastructure/SvgCodec.ts",
+    "classes": [
+      "SvgCodec"
+    ],
+    "imports": [
+      "@xmldom/xmldom",
+      "../domain/ShapeFactory.js",
+      "../domain/Shape.js",
+      "../domain/SvgDocument.js",
+      "../domain/Shape.js"
+    ]
+  },
+  {
+    "file": "src/infrastructure/SvgFileStore.ts",
+    "classes": [
+      "SvgFileStore"
+    ],
+    "imports": [
+      "node:fs",
+      "node:path",
+      "node:crypto",
+      "../application/DocumentStore.js",
+      "../domain/SvgDocument.js",
+      "./SvgCodec.js"
+    ]
+  },
+  {
+    "file": "src/main.ts",
+    "classes": [],
+    "imports": [
+      "./application/EditorSession.js",
+      "./application/CommandDispatcher.js",
+      "./cli/CliApplication.js",
+      "./cli/CommandParser.js",
+      "./cli/ConsoleRenderer.js",
+      "./infrastructure/SvgFileStore.js"
+    ]
+  }
+]

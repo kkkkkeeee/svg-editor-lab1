@@ -1,0 +1,13 @@
+bare-text: .NET=False Codec=REJECT expected=False
+close-text: .NET=False Codec=REJECT expected=False
+unknown-entity: .NET=False Codec=REJECT expected=False
+zero-reference: .NET=False Codec=REJECT expected=False
+surrogate-reference: .NET=False Codec=REJECT expected=False
+overflow-reference: .NET=False Codec=REJECT expected=False
+predefined: .NET=True Codec=ACCEPT expected=True
+numeric: .NET=True Codec=ACCEPT expected=True
+cdata: .NET=True Codec=ACCEPT expected=True
+CLI file preview.svg : .NET ACCEPT; elements=9
+CLI file roundtrip.svg : .NET ACCEPT; elements=8
+CLI file copy.svg : .NET ACCEPT; elements=8
+CLI file structure.svg : .NET ACCEPT; elements=6

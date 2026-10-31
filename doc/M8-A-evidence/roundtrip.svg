@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+  <g id="outer">
+    <ellipse id="e" cx="505" cy="240" fill="green" rx="40" ry="20"/>
+    <g id="nested">
+      <rect id="r" fill="#4a90d9" height="100" stroke-width="2" width="200" x="41" y="60"/>
+      <text id="t" x="25" y="310">中文 &amp; &lt;审计&gt; 空格</text>
+      <circle id="c" cx="410" cy="180" fill="#f5a623" r="50"/>
+    </g>
+    <line id="l" stroke="black" x1="35" x2="555" y1="210" y2="210"/>
+  </g>
+</svg>

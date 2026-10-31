@@ -1,0 +1,18 @@
+@startuml
+ title SVG CLI Phase 1 - planned dependencies
+ package "cli" as CLI
+ package "application" as APP {
+   interface DocumentStore
+ }
+ package "domain" as DOMAIN
+ package "infrastructure" as INFRA
+ component "main.ts" as MAIN
+ CLI --> APP
+ APP --> DOMAIN
+ INFRA --> DocumentStore : implements
+ INFRA --> DOMAIN
+ MAIN --> CLI
+ MAIN --> APP
+ MAIN --> DOMAIN
+ MAIN --> INFRA
+@enduml

@@ -1,4 +1,5 @@
 import { DOMParser, type Element, type Node } from "@xmldom/xmldom";
+import { SaxesParser } from "saxes";
 import { ShapeFactory } from "../domain/ShapeFactory.js";
 import type { Shape } from "../domain/Shape.js";
 import { SvgDocument } from "../domain/SvgDocument.js";
@@ -22,6 +23,7 @@ export class SvgCodec {
 
   public deserialize(xml: string): SvgImportResult {
     this.escape(xml); // 也检查解析器可能宽容接受的 XML 1.0 非法原始字符。
+    this.validateXml(xml);
     const parsed = new DOMParser({ onError: (level, message) => {
       throw new Error(`invalid XML: ${level}: ${message}`);
     } }).parseFromString(xml, "application/xml");
@@ -63,6 +65,15 @@ export class SvgCodec {
       document.add(this.restore(element, ids, counters, warnings));
     }
     return { document, warnings: Object.freeze(warnings) };
+  }
+
+  private validateXml(xml: string): void {
+    // xmldom 的 onError 不报告所有良构性错误。先做严格 SAX 校验，
+    // 不构造第二棵模型；任何错误立即中止，完成后才允许 DOM/领域转换。
+    const parser = new SaxesParser({ xmlns: true, defaultXMLVersion: "1.0", forceXMLVersion: true });
+    parser.on("error", error => { throw new Error(`invalid XML: ${error.message}`, { cause: error }); });
+    parser.on("doctype", () => { throw new Error("unsupported XML DTD or entity declaration"); });
+    parser.write(xml).close();
   }
 
   private restore(element: Element, ids: Set<string>, counters: Map<string, number>, warnings: string[]): Shape {

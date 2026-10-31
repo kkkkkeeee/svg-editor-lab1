@@ -1,0 +1,49 @@
+@startuml
+title M8-B actual module dependencies
+top to bottom direction
+skinparam componentStyle rectangle
+skinparam shadowing false
+component "main.ts\ncomposition root" as main
+package "cli" as cliPackage {
+  component "CliApplication\nREPL lifecycle" as cli
+  component "CommandParser\nConsoleRenderer" as terminal
+  cli --> terminal
+}
+package application {
+  component "CommandDispatcher\ncommand-name dispatch" as dispatcher
+  component "EditorSession\ndocument / path / IO boundary" as session
+  component "CommandHistory\ncandidate execution / snapshots" as history
+  interface DocumentStore as store
+  component "10 EditCommand implementations" as commands
+  dispatcher --> session
+  dispatcher --> commands : constructs
+  session --> history
+  session --> store
+  history --> commands : execute(candidate)
+}
+package domain {
+  component "SvgDocument\ncontrolled tree operations" as document
+  component "ShapeFactory\ntype-name construction" as factory
+  component "Shape / Group / leaves\nComposite behavior" as shapes
+  document --> shapes
+  factory --> shapes
+}
+package infrastructure {
+  component "SvgFileStore\nUTF-8 file IO / temporary replacement" as files
+  component "SvgCodec\nstrict XML validation / DOM conversion" as codec
+  files ..|> store
+  files --> codec
+  files --> document
+  codec --> factory
+  codec --> document
+}
+cli --> dispatcher
+commands --> document
+commands --> factory : CreateCommand only
+session --> document
+main --> cli : assemble
+main --> terminal : assemble
+main --> dispatcher : assemble
+main --> session : inject store
+main --> files : assemble
+@enduml

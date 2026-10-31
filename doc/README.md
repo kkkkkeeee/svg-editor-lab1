@@ -4,7 +4,7 @@
 
 使用 TypeScript 面向对象设计实现命令行 SVG 编辑器，重点是 Command、Composite、模块依赖和真实的 AI 协作过程。
 
-**M1～M6 已提交并推送，最新提交为 1c9d586。M7-A/B 已通过最终代码验收，本轮获准进行第七次提交与推送，结果以 Git 记录为准。** 当前 SVG REPL 的 19 个课程命令均已实现；插件不在 Phase 1 范围。当前完整测试为 223 项通过；这不替代尚未开始的 M8 综合交付验收。历史阶段测试记录保留不变。
+**M1～M7 已提交并推送，最新提交为 0dc8a0646ead8e34ee11a62841127757819679cf。M8-A 已完成；M8-B 已通过设计和文档审核，当前进行最终提交前核验，尚未提交。** 19 条课程命令均已实现。当前完整测试为 **246 项通过、0 失败、0 跳过**；M8-A 的 223 项及当时发现的失败反例保留为历史。尚未最终提交或创建 final 标签。
 
 需求依据：课程 `phase_cli_1.md`，本机原件位于 `D:/learning/读研/1.1/高级软件开发/phase_cli_1.md`。本说明不替代原始要求。
 
@@ -22,7 +22,7 @@
 
 不实现 box、ShapeProvider 插件、动态加载、GUI 或路径寻址；create box 按未知类型报错。
 
-交付需 Git 分步提交并推送远程仓库，最终提交在截止时间前打 final 标签。本文件须包括架构、过程、一致性自查及质量保证。远程仓库为 https://github.com/kkkkkeeee/svg-editor-lab1；截止时间待用户提供。本轮 M7 最终验收获准提交推送，不创建 final 标签、不开始 M8。
+交付需 Git 分步提交并推送远程仓库，最终提交在截止时间前打 final 标签。本文件包括架构、过程、一致性自查及质量保证。远程仓库为 https://github.com/kkkkkeeee/svg-editor-lab1；截止时间待用户提供。本轮 M8-B 不暂存、提交、推送或创建标签，审核后另行安排。
 
 ## 2. 环境、脚本与目录
 
@@ -59,8 +59,8 @@ assignment1/
 │   ├── cli/Cli.test.ts
 │   ├── application/         # CreateHistory、BasicEdit、DeleteCanvas、HierarchyOrder、GroupUngroup、SaveIo、ReadIo 测试（MemoryDocumentStore 为测试替代存储）
 │   ├── domain/             # Shapes.test.ts、Tree.test.ts
-│   └── infrastructure/     # SvgCodec.test.ts、SvgImport.test.ts
-├── examples/               # preview.svg、codec-preview.svg、generate-codec-preview.mjs
+│   └── infrastructure/     # SvgCodec.test.ts、SvgImport.test.ts、StrictXml.test.ts
+├── examples/               # preview.svg、codec-preview.svg、m6b-save-preview.svg、generate-codec-preview.mjs
 ├── doc/README.md
 ├── package.json
 ├── package-lock.json
@@ -72,7 +72,7 @@ assignment1/
 
 .gitkeep 使 Git 保留空目录，不创建空业务类；添加实际文件后可移除。node_modules、dist、.npm-cache 和日志已忽略。项目内 npm 缓存沿用此前解决写权限问题的配置。
 
-保留原 tsconfig.json 的严格检查、NodeNext、sourceMap 和 dist/main.js 输出布局。tsconfig.test.json 继承它，将 rootDir 放宽到项目根并启用 noEmit，覆盖 src 和 tests。测试脚本显式指定入口、CLI、创建历史、基础编辑、删除画布、层级排序、分组解散、叶子及树模型、SVG 序列化、文件保存、SVG 解析、文件读取共十三个测试文件，避免 Windows shell 通配符差异；新增测试文件时同步调整入口。
+保留原 tsconfig.json 的严格检查、NodeNext、sourceMap 和 dist/main.js 输出布局。tsconfig.test.json 继承它，将 rootDir 放宽到项目根并启用 noEmit，覆盖 src 和 tests。测试脚本显式指定入口、CLI、创建历史、基础编辑、删除画布、层级排序、分组解散、叶子及树模型、SVG 序列化、文件保存、SVG 解析、文件读取及严格 XML 回归共十四个测试文件，避免 Windows shell 通配符差异；新增测试文件时同步调整入口。
 
 ## 3. 模块划分与依赖规则
 
@@ -971,3 +971,86 @@ XML 元素树由 DOMParser 解析，所有解析诊断均抛错。DTD/自定义�
 支持范围仍为第 25 节的严格 SVG 子集：显式几何、无单位数值、标准命名空间、六元素、匹配画布的 viewBox；不支持 transform/CSS/任意外部 SVG。非阻塞限制仍为同步 IO、全量复制、递归深度、浮点精度及 M6 临时文件替换保证范围。未发现阻塞 M8 的问题，但 M8 未开始，不能据此宣称综合交付验收已完成。
 
 第七次提交范围为 13 个 M7 文件：六个生产源码、两份新增测试、内存存储测试辅助及 CLI 测试更新、package.json/lock、README。XML 库仅同版本转为运行依赖，清单和锁文件一致。提交信息为 `feat: implement SVG import and file reading`。审计报告、旧黑盒脚本和 ZIP 排除；构建产物、缓存及临时验证文件不提交。提交及推送成功与哈希由实际 Git 输出确认，不预写未发生的结果。
+
+## 27. M8-A 独立综合审计（2026-10-30）
+
+M7 已提交并推送，基线为 0dc8a0646ead8e34ee11a62841127757819679cf。本轮以课程原文复核全部源码、19 条命令、模式与依赖、文件往返、Git及文档，详见 [M8-A 独立审计报告](M8-A-AUDIT.md) 和其中的独立脚本/证据链接。
+
+原工作区与 git archive 创建的独立副本均通过类型检查、构建和 223 项测试（0失败/0跳过），副本 npm ci 成功；原 PlantUML 实际检查与渲染通过。编译后 CLI 的常规流程覆盖全部19条命令，真实SVG文件通过XML结构检查，用户确认本轮 preview.svg 在 VS Code 正常显示。
+
+主动反例发现 **F-01：普通文本中的裸 & 和 ]]> 被当前 XML 解析器接受**，read 因而错误替换旧文档并清空 redo；.NET XML 交叉验证拒绝两个文件。这说明既有测试通过不能证明所有非法XML均拒绝，修正此前验收“未发现缺陷”的认识。该项须在最终交付前修复；本轮只审计、不改业务代码。M8-B 建议优先补严格XML验证及失败状态回归，再同步当前文档/实际架构图和交付清单。
+
+三个旧审计文件保持原样；本轮未暂存、提交、推送或创建标签。允许进入M8-B修复整理，不代表Phase1最终交付完成。
+
+## 28. M8-B 修复与交付整理（2026-10-30～31）
+
+F-01/F-02修复与复验完成，等待审核。详见 [修复报告及交付材料清单](M8-B-REPORT.md)。保留上述历史计划、测试数量及M8-A失败事实。
+
+### 安装与使用
+
+已验证Windows、Node20.9.0、npm10.1.0。首次获取：git clone https://github.com/kkkkkeeee/svg-editor-lab1.git，然后 cd svg-editor-lab1。最终修复须先完成提交推送，远程克隆才包含本轮代码。项目根目录执行：
+
+```powershell
+npm.cmd ci
+npm.cmd run typecheck
+npm.cmd run build
+npm.cmd test
+npm.cmd start
+```
+
+开发可用npm.cmd run cli，EOF或Ctrl+C退出。以下覆盖19命令；save会覆盖同名文件，请选择自己的新输出路径：
+
+```text
+help
+init 640 360
+canvas
+create g scene
+create rect r 10 20 100 50 blue in scene
+create circle c 200 80 25 orange in scene
+create ellipse e 300 200 40 20 green in scene
+create line l 10 100 200 100 black in scene
+create text t 20 300 "中文 & <示例>" in scene
+move r -1.5 2
+scale c 1.2
+set t text "完成 & 检查"
+group pair r c
+tree pair
+show r
+front r
+back c
+addto pair t
+ungroup pair
+delete e
+undo
+redo
+canvas 800 600
+save demo.svg
+read demo.svg
+tree
+```
+
+pair在scene内，符合禁止根级ungroup规则。默认save使用最近成功read或显式save路径，后者为项目约定；init成功清路径。文档操作成功重置历史，下一次成功编辑解禁，查询canvas不影响历史。
+
+### 实际架构和一致性
+
+![实际依赖](architecture-actual.svg)
+
+[PlantUML源码](architecture-actual.puml) · [PNG](architecture-actual.png)
+
+![实际Command和Composite](patterns-actual.svg)
+
+[模式图源码](patterns-actual.puml) · [PNG](patterns-actual.png)
+
+两图经PlantUML实际检查、渲染，AI查看PNG确认可读。原计划图保留，以上图为主要职责现状图。cli→application→domain；application只依赖自身DocumentStore。SvgFileStore实现该接口，负责UTF-8磁盘读写；SvgCodec负责XML/领域转换，基础设施依赖domain。main仅组装和启动，无直接domain import。
+
+10个独立Command通过Session/History在候选文档执行，完整快照用于恢复，不替代命令封装。Group和五类叶子继承Shape，统一几何行为，私有子树递归多态操作。命令不保存旧Shape引用。名字分派仍集中在Dispatcher/Factory，是已标记的未来扩展点；不新增插件框架。M8-B没有修改领域模型或历史管理器。
+
+### 严格XML、验证和限制
+
+xmldom错误回调未报告裸&和普通文本]]>，因此原回调抛错不足以保证良构性。新增saxes 6.0.0（传递依赖xmlchars 2.2.0）先完成XML1.0良构校验，再做原DOM转换，DTD直接拒绝。无正则XML解析或自定义实体加载。维护成本为两个小型包和额外一次解析，避免重写已验证转换逻辑。
+
+继续支持六元素、标准SVG命名空间、显式几何、无单位有限数值、匹配画布的viewBox、嵌套顺序和显式样式、中文/空文本、预定义实体、合法数字引用与CDATA。拒绝DTD、非法引用、未知元素/属性/命名空间、transform、CSS、非默认viewBox、单位、defs/use/path；box标记仅降级普通g。此为已审核子集，不承诺通用SVG兼容。
+
+新增23项回归，原223项未改，现为246通过/0失败/0跳过；类型检查和构建通过。独立副本npm ci/typecheck/build/test亦全通过。首次沙箱磁盘替换限制引起10项失败，授权重跑全通过。修订黑盒覆盖19命令及两个反例，.NET独立交叉验证通过；新证据写M8-B-evidence，历史证据保留。真实预览save/read/save字节一致，用户再次确认正常显示。
+
+同步IO、递归和全量历史的资源限制不变。临时替换不保证跨平台原子性、断电持久性、并发互斥或ACL保留。提交材料建议见报告，本轮不暂存/提交/推送/tag，不宣称最终交付完成。

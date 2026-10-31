@@ -1,0 +1,33 @@
+@startuml
+title M8-B actual Command and Composite
+skinparam shadowing false
+interface EditCommand {
+  execute(document: SvgDocument)
+}
+class "CreateCommand / MoveCommand / ScaleCommand\nSetCommand / DeleteCommand / AddToCommand\nFrontCommand / BackCommand / GroupCommand / UngroupCommand" as ConcreteCommands
+ConcreteCommands ..|> EditCommand
+class EditorSession
+class CommandHistory
+class SvgDocument
+EditorSession --> CommandHistory : execute / undo / redo
+CommandHistory --> EditCommand : execute on candidate
+CommandHistory --> SvgDocument : clone snapshots
+ConcreteCommands --> SvgDocument : controlled edits
+abstract class Shape {
+  move(dx, dy)
+  scale(factor)
+  set(attribute, value)
+  clone()
+  describe()
+}
+class Group
+class "Rect / Circle / Ellipse / Line / Text" as Leaves
+Shape <|-- Group
+Shape <|-- Leaves
+Group *-- "0..*" Shape : private children
+SvgDocument *-- "0..*" Shape : private roots
+note bottom of ConcreteCommands
+Each named command is a separate class/file.
+Only immutable parameters, no old Shape references.
+end note
+@enduml

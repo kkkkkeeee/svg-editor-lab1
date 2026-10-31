@@ -1,0 +1,4 @@
+REJECT bare-ampersand.svg : Exception calling "Load" with "1" argument(s): "An error occurred while parsing EntityName. Line 1, position 92."
+REJECT cdata-close.svg : Exception calling "Load" with "1" argument(s): "']]>' is not allowed in character data. Line 1, position 91."
+ACCEPT preview.svg
+ACCEPT roundtrip.svg

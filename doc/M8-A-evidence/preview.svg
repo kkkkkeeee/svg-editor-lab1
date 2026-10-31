@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="300" viewBox="0 0 640 300">
+  <g id="diagram">
+    <rect id="start" fill="#4a90d9" height="80" width="160" x="30" y="60"/>
+    <text id="title" fill="white" x="40" y="105">开始 &amp; &lt;审计&gt;</text>
+    <g id="right">
+      <circle id="end" cx="440" cy="100" fill="#f5a623" r="45"/>
+      <text id="label" x="420" y="105">完成</text>
+    </g>
+    <line id="edge" stroke="black" stroke-width="3" x1="190" x2="395" y1="100" y2="100"/>
+  </g>
+  <ellipse id="badge" cx="540" cy="220" fill="green" rx="40" ry="20"/>
+</svg>
